@@ -1,0 +1,21 @@
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/owenthereal/candy"
+	"github.com/owenthereal/candy/caddy"
+	"github.com/owenthereal/candy/dns"
+)
+
+func main() {
+	svr := candy.Server{
+		Proxy: caddy.New(caddy.Config{Addr: ":80"}),
+		DNS:   dns.New(dns.Config{Addr: ":8080"}),
+	}
+
+	if err := svr.Start(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+}
