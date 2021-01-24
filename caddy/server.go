@@ -15,6 +15,7 @@ import (
 type Config struct {
 	HTTPAddr  string
 	HTTPSAddr string
+	AdminAddr string
 }
 
 func New(cfg Config) candy.ProxyServer {
@@ -77,7 +78,7 @@ func (c *caddyServer) Start(ctx context.Context, cfg candy.ProxyServerConfig) er
 	}
 
 	ccfg := &caddy.Config{
-		Admin: &caddy.AdminConfig{Listen: ":22019"},
+		Admin: &caddy.AdminConfig{Listen: c.Config.AdminAddr},
 		AppsRaw: caddy.ModuleMap{
 			"http": caddyconfig.JSON(httpApp, nil),
 			"tls":  caddyconfig.JSON(tls, nil),
