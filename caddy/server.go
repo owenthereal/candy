@@ -8,11 +8,13 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
+	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"github.com/owenthereal/candy"
 )
 
 type Config struct {
-	Addr string
+	HTTPAddr  string
+	HTTPSAddr string
 }
 
 func New(cfg Config) candy.ProxyServer {
@@ -26,7 +28,10 @@ type caddyServer struct {
 func (c *caddyServer) Start(ctx context.Context, cfg candy.ProxyServerConfig) error {
 	// TODO: Parse host.Upstream: 8080, 127.0.0.1:8080, JSON
 
-	var routes caddyhttp.RouteList
+	var (
+		routes caddyhttp.RouteList
+		hosts  []string
+	)
 	for _, host := range cfg.Hosts {
 		ht := reverseproxy.HTTPTransport{}
 		handler := reverseproxy.Handler{
@@ -42,25 +47,40 @@ func (c *caddyServer) Start(ctx context.Context, cfg candy.ProxyServerConfig) er
 					"host": caddyconfig.JSON(caddyhttp.MatchHost{host.Host}, nil),
 				},
 			},
+			Terminal: true,
 		}
 
 		routes = append(routes, route)
+		hosts = append(hosts, host.Host)
 	}
 
 	server := &caddyhttp.Server{
-		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: false},
-		Routes:    routes,
-		Listen:    []string{c.Config.Addr},
+		Routes: routes,
+		Listen: []string{c.Config.HTTPAddr, c.Config.HTTPSAddr},
 	}
 
 	httpApp := caddyhttp.App{
-		Servers: map[string]*caddyhttp.Server{"proxy": server},
+		Servers: map[string]*caddyhttp.Server{"candy": server},
+	}
+
+	tls := caddytls.TLS{
+		Automation: &caddytls.AutomationConfig{
+			Policies: []*caddytls.AutomationPolicy{
+				{
+					Subjects: hosts,
+					IssuersRaw: []json.RawMessage{
+						caddyconfig.JSONModuleObject(caddytls.InternalIssuer{}, "module", "internal", nil),
+					},
+				},
+			},
+		},
 	}
 
 	ccfg := &caddy.Config{
 		Admin: &caddy.AdminConfig{Listen: ":22019"},
 		AppsRaw: caddy.ModuleMap{
 			"http": caddyconfig.JSON(httpApp, nil),
+			"tls":  caddyconfig.JSON(tls, nil),
 		},
 	}
 

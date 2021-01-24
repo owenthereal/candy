@@ -11,7 +11,7 @@ import (
 
 func main() {
 	svr := candy.Server{
-		Proxy: caddy.New(caddy.Config{Addr: ":80"}),
+		Proxy: caddy.New(caddy.Config{HTTPAddr: ":80", HTTPSAddr: ":443"}),
 		DNS:   dns.New(dns.Config{Addr: ":8080"}),
 	}
 
