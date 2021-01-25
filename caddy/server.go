@@ -22,32 +22,49 @@ type Config struct {
 	HTTPAddr  string
 	HTTPSAddr string
 	AdminAddr string
+	TLDs      []string
+	DomainDir string
 }
 
 func New(cfg Config) candy.ProxyServer {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &caddyServer{Config: cfg, ctx: ctx, cancel: cancel}
+
+	return &caddyServer{
+		cfg: cfg,
+		apps: candy.NewAppService(candy.AppServiceConfig{
+			TLDs:      cfg.TLDs,
+			DomainDir: cfg.DomainDir,
+		}),
+		ctx:    ctx,
+		cancel: cancel,
+	}
 }
 
 type caddyServer struct {
-	Config Config
+	cfg  Config
+	apps *candy.AppService
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func (c *caddyServer) Start(cfg candy.ProxyServerConfig) error {
-	// TODO: Parse host.Upstream: 8080, 127.0.0.1:8080, JSON
+func (c *caddyServer) Start() error {
+	apps, err := c.apps.FindApps()
+	if err != nil {
+		return fmt.Errorf("error loading apps: %w", err)
+	}
+
 	caddy.TrapSignals()
 
 	var (
 		routes caddyhttp.RouteList
 		hosts  []string
 	)
-	for _, host := range cfg.Hosts {
+	for _, app := range apps {
 		ht := reverseproxy.HTTPTransport{}
 		handler := reverseproxy.Handler{
-			TransportRaw: caddyconfig.JSONModuleObject(ht, "protocol", "http", nil),
-			Upstreams:    reverseproxy.UpstreamPool{{Dial: host.Upstream}},
+			TransportRaw: caddyconfig.JSONModuleObject(ht, "protocol", app.Protocol, nil),
+			Upstreams:    reverseproxy.UpstreamPool{{Dial: app.Addr}},
 		}
 		route := caddyhttp.Route{
 			HandlersRaw: []json.RawMessage{
@@ -55,19 +72,19 @@ func (c *caddyServer) Start(cfg candy.ProxyServerConfig) error {
 			},
 			MatcherSetsRaw: []caddy.ModuleMap{
 				{
-					"host": caddyconfig.JSON(caddyhttp.MatchHost{host.Host}, nil),
+					"host": caddyconfig.JSON(caddyhttp.MatchHost{app.Host}, nil),
 				},
 			},
 			Terminal: true,
 		}
 
 		routes = append(routes, route)
-		hosts = append(hosts, host.Host)
+		hosts = append(hosts, app.Host)
 	}
 
 	server := &caddyhttp.Server{
 		Routes: routes,
-		Listen: []string{c.Config.HTTPAddr, c.Config.HTTPSAddr},
+		Listen: []string{c.cfg.HTTPAddr, c.cfg.HTTPSAddr},
 	}
 
 	httpApp := caddyhttp.App{
@@ -88,7 +105,7 @@ func (c *caddyServer) Start(cfg candy.ProxyServerConfig) error {
 	}
 
 	ccfg := &caddy.Config{
-		Admin: &caddy.AdminConfig{Listen: c.Config.AdminAddr},
+		Admin: &caddy.AdminConfig{Listen: c.cfg.AdminAddr},
 		AppsRaw: caddy.ModuleMap{
 			"http": caddyconfig.JSON(httpApp, nil),
 			"tls":  caddyconfig.JSON(tls, nil),
@@ -105,6 +122,12 @@ func (c *caddyServer) Start(cfg candy.ProxyServerConfig) error {
 	}
 }
 
+func (c *caddyServer) Reload() error {
+	fmt.Println("reload")
+
+	return nil
+}
+
 func (c *caddyServer) Shutdown() error {
 	candy.Log().Info("shutting down Caddy server")
 
@@ -119,9 +142,9 @@ func (c *caddyServer) Shutdown() error {
 }
 
 func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, body io.Reader) error {
-	parsedAddr, err := caddy.ParseNetworkAddress(c.Config.AdminAddr)
+	parsedAddr, err := caddy.ParseNetworkAddress(c.cfg.AdminAddr)
 	if err != nil || parsedAddr.PortRangeSize() > 1 {
-		return fmt.Errorf("invalid admin address %s: %v", c.Config.AdminAddr, err)
+		return fmt.Errorf("invalid admin address %s: %v", c.cfg.AdminAddr, err)
 	}
 	origin := parsedAddr.JoinHostPort(0)
 	if parsedAddr.IsUnixNetwork() {

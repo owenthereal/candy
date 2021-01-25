@@ -2,44 +2,40 @@ package candy
 
 import (
 	"github.com/oklog/run"
+	"go.uber.org/zap"
 )
 
 type Server struct {
-	Proxy ProxyServer
-	DNS   DNSServer
+	Proxy   ProxyServer
+	DNS     DNSServer
+	Watcher Watcher
 }
 
 func (s *Server) Start() error {
 	var g run.Group
 	{
-		cfg := ProxyServerConfig{
-			Hosts: []ProxyHost{
-				{
-					Host:     "api.meroxa",
-					Upstream: "192.168.64.36:30784",
-				},
-				{
-					Host:     "logmgr.meroxa",
-					Upstream: "192.168.64.36:31525",
-				},
-			},
-		}
-
 		g.Add(func() error {
-			return s.Proxy.Start(cfg)
+			return s.Proxy.Start()
 		}, func(err error) {
 			s.Proxy.Shutdown()
 		})
 	}
 	{
-		cfg := DNSServerConfig{
-			Domains: []string{"meroxa"},
-		}
-
 		g.Add(func() error {
-			return s.DNS.Start(cfg)
+			return s.DNS.Start()
 		}, func(err error) {
 			s.DNS.Shutdown()
+		})
+	}
+	{
+		g.Add(func() error {
+			return s.Watcher.Watch(func() {
+				if err := s.Proxy.Reload(); err != nil {
+					Log().Error("error reloading proxy", zap.Error(err))
+				}
+			})
+		}, func(err error) {
+			s.Watcher.Shutdown()
 		})
 	}
 

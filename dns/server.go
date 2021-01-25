@@ -12,11 +12,13 @@ import (
 
 type Config struct {
 	Addr string
+	TLDs []string
 }
 
 func New(cfg Config) candy.DNSServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &dnsServer{
+		Config: cfg,
 		udp:    &dns.Server{Addr: cfg.Addr, Net: "udp"},
 		tcp:    &dns.Server{Addr: cfg.Addr, Net: "tcp"},
 		ctx:    ctx,
@@ -25,15 +27,16 @@ func New(cfg Config) candy.DNSServer {
 }
 
 type dnsServer struct {
+	Config Config
 	udp    *dns.Server
 	tcp    *dns.Server
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func (d *dnsServer) Start(cfg candy.DNSServerConfig) error {
-	for _, domain := range cfg.Domains {
-		dns.HandleFunc(domain+".", d.handleDNS)
+func (d *dnsServer) Start() error {
+	for _, tld := range d.Config.TLDs {
+		dns.HandleFunc(tld+".", d.handleDNS)
 	}
 
 	var g run.Group

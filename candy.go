@@ -5,27 +5,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type ProxyServerConfig struct {
-	Hosts []ProxyHost
-}
-
-type ProxyHost struct {
-	Host     string
-	Upstream string
-}
-
 type ProxyServer interface {
-	Start(cfg ProxyServerConfig) error
+	Start() error
+	Reload() error
 	Shutdown() error
 }
 
-type DNSServerConfig struct {
-	Addr    string
-	Domains []string
+type DNSServer interface {
+	Start() error
+	Shutdown() error
 }
 
-type DNSServer interface {
-	Start(cfg DNSServerConfig) error
+type WatcherHandleFunc func()
+
+type Watcher interface {
+	Watch(WatcherHandleFunc) error
 	Shutdown() error
 }
 

@@ -58,6 +58,9 @@ github.com/dgraph-io/ristretto/z
 github.com/dgryski/go-farm
 # github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac
 github.com/dustin/go-humanize
+# github.com/fsnotify/fsnotify v1.4.9
+## explicit
+github.com/fsnotify/fsnotify
 # github.com/go-sql-driver/mysql v1.5.0
 github.com/go-sql-driver/mysql
 # github.com/golang/protobuf v1.4.3
@@ -94,6 +97,11 @@ github.com/google/cel-go/parser
 github.com/google/cel-go/parser/gen
 # github.com/google/uuid v1.1.1
 github.com/google/uuid
+# github.com/hashicorp/errwrap v1.0.0
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.0.0
+## explicit
+github.com/hashicorp/go-multierror
 # github.com/huandu/xstrings v1.3.1
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.8
@@ -228,6 +236,7 @@ go.uber.org/atomic
 # go.uber.org/multierr v1.5.0
 go.uber.org/multierr
 # go.uber.org/zap v1.16.0
+## explicit
 go.uber.org/zap
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/bufferpool
