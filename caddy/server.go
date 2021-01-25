@@ -1,6 +1,7 @@
 package caddy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,10 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"github.com/owenthereal/candy"
+)
+
+var (
+	caddyAPITimeout = 5 * time.Second
 )
 
 type Config struct {
@@ -49,13 +54,57 @@ type caddyServer struct {
 }
 
 func (c *caddyServer) Start() error {
-	apps, err := c.apps.FindApps()
-	if err != nil {
-		return fmt.Errorf("error loading apps: %w", err)
-	}
-
 	caddy.TrapSignals()
 
+	ccfg, err := c.loadConfig()
+	if err != nil {
+		return fmt.Errorf("error loading Caddy config: %w", err)
+	}
+
+	if err := caddy.Run(ccfg); err != nil {
+		return err
+	}
+
+	select {
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	}
+}
+
+func (c *caddyServer) Reload() error {
+	candy.Log().Info("reloading Caddy server")
+
+	ccfg, err := c.loadConfig()
+	if err != nil {
+		return fmt.Errorf("error reloading Caddy config: %w", err)
+	}
+
+	b, err := json.Marshal(ccfg)
+	if err != nil {
+		return fmt.Errorf("error JSON marshaling Caddy config for reloading: %w", err)
+	}
+
+	return c.apiRequest(c.ctx, http.MethodPost, "/load", bytes.NewReader(b))
+}
+
+func (c *caddyServer) Shutdown() error {
+	candy.Log().Info("shutting down Caddy server")
+
+	defer c.cancel()
+
+	return c.apiRequest(c.ctx, http.MethodPost, "/stop", nil)
+}
+
+func (c *caddyServer) loadConfig() (*caddy.Config, error) {
+	apps, err := c.apps.FindApps()
+	if err != nil {
+		return nil, fmt.Errorf("error loading apps: %w", err)
+	}
+
+	return c.buildConfig(apps), nil
+}
+
+func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	var (
 		routes caddyhttp.RouteList
 		hosts  []string
@@ -104,44 +153,19 @@ func (c *caddyServer) Start() error {
 		},
 	}
 
-	ccfg := &caddy.Config{
+	return &caddy.Config{
 		Admin: &caddy.AdminConfig{Listen: c.cfg.AdminAddr},
 		AppsRaw: caddy.ModuleMap{
 			"http": caddyconfig.JSON(httpApp, nil),
 			"tls":  caddyconfig.JSON(tls, nil),
 		},
 	}
-
-	if err := caddy.Run(ccfg); err != nil {
-		return err
-	}
-
-	select {
-	case <-c.ctx.Done():
-		return c.ctx.Err()
-	}
-}
-
-func (c *caddyServer) Reload() error {
-	fmt.Println("reload")
-
-	return nil
-}
-
-func (c *caddyServer) Shutdown() error {
-	candy.Log().Info("shutting down Caddy server")
-
-	ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
-
-	defer func() {
-		c.cancel()
-		cancel()
-	}()
-
-	return c.apiRequest(ctx, http.MethodPost, "/stop", nil)
 }
 
 func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, body io.Reader) error {
+	ctx, cancel := context.WithTimeout(ctx, caddyAPITimeout)
+	defer cancel()
+
 	parsedAddr, err := caddy.ParseNetworkAddress(c.cfg.AdminAddr)
 	if err != nil || parsedAddr.PortRangeSize() > 1 {
 		return fmt.Errorf("invalid admin address %s: %v", c.cfg.AdminAddr, err)
