@@ -73,10 +73,8 @@ func (c *caddyServer) Start() error {
 		return err
 	}
 
-	select {
-	case <-c.ctx.Done():
-		return c.ctx.Err()
-	}
+	<-c.ctx.Done()
+	return c.ctx.Err()
 }
 
 func (c *caddyServer) Reload() error {

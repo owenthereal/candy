@@ -17,14 +17,14 @@ func (s *Server) Start() error {
 		g.Add(func() error {
 			return s.Proxy.Start()
 		}, func(err error) {
-			s.Proxy.Shutdown()
+			_ = s.Proxy.Shutdown()
 		})
 	}
 	{
 		g.Add(func() error {
 			return s.DNS.Start()
 		}, func(err error) {
-			s.DNS.Shutdown()
+			_ = s.DNS.Shutdown()
 		})
 	}
 	{
@@ -35,7 +35,7 @@ func (s *Server) Start() error {
 				}
 			})
 		}, func(err error) {
-			s.Watcher.Shutdown()
+			_ = s.Watcher.Shutdown()
 		})
 	}
 

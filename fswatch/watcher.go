@@ -40,10 +40,8 @@ func (f *fsWatcher) Watch(h candy.WatcherHandleFunc) error {
 		return err
 	}
 
-	select {
-	case <-f.ctx.Done():
-		return f.ctx.Err()
-	}
+	<-f.ctx.Done()
+	return f.ctx.Err()
 }
 
 func (f *fsWatcher) loop(watcher *fsnotify.Watcher, h candy.WatcherHandleFunc) {

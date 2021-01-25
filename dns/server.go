@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/miekg/dns"
 	"github.com/oklog/run"
 	"github.com/owenthereal/candy"
@@ -44,14 +45,14 @@ func (d *dnsServer) Start() error {
 		g.Add(func() error {
 			return d.udp.ListenAndServe()
 		}, func(err error) {
-			d.Shutdown()
+			_ = d.Shutdown()
 		})
 	}
 	{
 		g.Add(func() error {
 			return d.tcp.ListenAndServe()
 		}, func(err error) {
-			d.Shutdown()
+			_ = d.Shutdown()
 		})
 	}
 	{
@@ -59,7 +60,7 @@ func (d *dnsServer) Start() error {
 			<-d.ctx.Done()
 			return d.ctx.Err()
 		}, func(err error) {
-			d.Shutdown()
+			_ = d.Shutdown()
 		})
 	}
 
@@ -71,10 +72,15 @@ func (d *dnsServer) Shutdown() error {
 
 	candy.Log().Info("shutting down DNS server")
 
-	d.udp.Shutdown()
-	d.tcp.Shutdown()
+	var merr *multierror.Error
+	if err := d.udp.Shutdown(); err != nil {
+		merr = multierror.Append(merr, err)
+	}
+	if err := d.tcp.Shutdown(); err != nil {
+		merr = multierror.Append(merr, err)
+	}
 
-	return nil
+	return merr
 }
 
 func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
@@ -121,5 +127,5 @@ func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	}
 
-	w.WriteMsg(m)
+	_ = w.WriteMsg(m)
 }
