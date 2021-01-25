@@ -15,37 +15,63 @@ type Config struct {
 }
 
 func New(cfg Config) candy.DNSServer {
-	return &dnsServer{Config: cfg}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &dnsServer{
+		udp:    &dns.Server{Addr: cfg.Addr, Net: "udp"},
+		tcp:    &dns.Server{Addr: cfg.Addr, Net: "tcp"},
+		ctx:    ctx,
+		cancel: cancel,
+	}
 }
 
 type dnsServer struct {
-	Config Config
+	udp    *dns.Server
+	tcp    *dns.Server
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func (d *dnsServer) Start(ctx context.Context, cfg candy.DNSServerConfig) error {
+func (d *dnsServer) Start(cfg candy.DNSServerConfig) error {
 	for _, domain := range cfg.Domains {
 		dns.HandleFunc(domain+".", d.handleDNS)
 	}
 
 	var g run.Group
 	{
-		udp := &dns.Server{Addr: d.Config.Addr, Net: "udp"}
 		g.Add(func() error {
-			return udp.ListenAndServe()
-		}, func(error) {
-			udp.ShutdownContext(ctx)
+			return d.udp.ListenAndServe()
+		}, func(err error) {
+			d.Shutdown()
 		})
 	}
 	{
-		tcp := &dns.Server{Addr: d.Config.Addr, Net: "tcp"}
 		g.Add(func() error {
-			return tcp.ListenAndServe()
-		}, func(error) {
-			tcp.ShutdownContext(ctx)
+			return d.tcp.ListenAndServe()
+		}, func(err error) {
+			d.Shutdown()
+		})
+	}
+	{
+		g.Add(func() error {
+			<-d.ctx.Done()
+			return d.ctx.Err()
+		}, func(err error) {
+			d.Shutdown()
 		})
 	}
 
 	return g.Run()
+}
+
+func (d *dnsServer) Shutdown() error {
+	defer d.cancel()
+
+	candy.Log().Info("shutting down DNS server")
+
+	d.udp.Shutdown()
+	d.tcp.Shutdown()
+
+	return nil
 }
 
 func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {

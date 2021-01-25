@@ -1,8 +1,6 @@
 package candy
 
 import (
-	"context"
-
 	"github.com/oklog/run"
 )
 
@@ -11,7 +9,7 @@ type Server struct {
 	DNS   DNSServer
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) Start() error {
 	var g run.Group
 	{
 		cfg := ProxyServerConfig{
@@ -28,8 +26,9 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 
 		g.Add(func() error {
-			return s.Proxy.Start(ctx, cfg)
-		}, func(error) {
+			return s.Proxy.Start(cfg)
+		}, func(err error) {
+			s.Proxy.Shutdown()
 		})
 	}
 	{
@@ -38,8 +37,9 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 
 		g.Add(func() error {
-			return s.DNS.Start(ctx, cfg)
-		}, func(error) {
+			return s.DNS.Start(cfg)
+		}, func(err error) {
+			s.DNS.Shutdown()
 		})
 	}
 

@@ -1,6 +1,9 @@
 package candy
 
-import "context"
+import (
+	"github.com/caddyserver/caddy/v2"
+	"go.uber.org/zap"
+)
 
 type ProxyServerConfig struct {
 	Hosts []ProxyHost
@@ -12,7 +15,8 @@ type ProxyHost struct {
 }
 
 type ProxyServer interface {
-	Start(ctx context.Context, cfg ProxyServerConfig) error
+	Start(cfg ProxyServerConfig) error
+	Shutdown() error
 }
 
 type DNSServerConfig struct {
@@ -21,5 +25,10 @@ type DNSServerConfig struct {
 }
 
 type DNSServer interface {
-	Start(ctx context.Context, cfg DNSServerConfig) error
+	Start(cfg DNSServerConfig) error
+	Shutdown() error
+}
+
+func Log() *zap.Logger {
+	return caddy.Log().Named("candy")
 }
