@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -49,6 +50,9 @@ type caddyServer struct {
 	cfg  Config
 	apps *candy.AppService
 
+	caddyCfg      *caddy.Config
+	caddyCfgMutex sync.Mutex
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -60,6 +64,10 @@ func (c *caddyServer) Start() error {
 	if err != nil {
 		return fmt.Errorf("error loading Caddy config: %w", err)
 	}
+
+	c.caddyCfgMutex.Lock()
+	c.caddyCfg = ccfg
+	c.caddyCfgMutex.Unlock()
 
 	if err := caddy.Run(ccfg); err != nil {
 		return err
@@ -79,12 +87,21 @@ func (c *caddyServer) Reload() error {
 		return fmt.Errorf("error reloading Caddy config: %w", err)
 	}
 
-	b, err := json.Marshal(ccfg)
-	if err != nil {
-		return fmt.Errorf("error JSON marshaling Caddy config for reloading: %w", err)
+	c.caddyCfgMutex.Lock()
+	defer c.caddyCfgMutex.Unlock()
+
+	if jsonEqual(c.caddyCfg, ccfg) {
+		candy.Log().Info("Caddy server unchanged")
+		return nil
 	}
 
-	return c.apiRequest(c.ctx, http.MethodPost, "/load", bytes.NewReader(b))
+	if err := c.apiRequest(c.ctx, http.MethodPost, "/load", ccfg); err != nil {
+		return err
+	}
+
+	c.caddyCfg = ccfg
+
+	return nil
 }
 
 func (c *caddyServer) Shutdown() error {
@@ -162,7 +179,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	}
 }
 
-func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, body io.Reader) error {
+func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, v interface{}) error {
 	ctx, cancel := context.WithTimeout(ctx, caddyAPITimeout)
 	defer cancel()
 
@@ -173,6 +190,16 @@ func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, body i
 	origin := parsedAddr.JoinHostPort(0)
 	if parsedAddr.IsUnixNetwork() {
 		origin = "unixsocket" // hack so that http.NewRequest() is happy
+	}
+
+	var body io.Reader
+	if v != nil {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("error marshaling JSON: %w", err)
+		}
+
+		body = bytes.NewReader(b)
 	}
 
 	// form the request
@@ -230,4 +257,18 @@ func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, body i
 	}
 
 	return nil
+}
+
+func jsonEqual(v1, v2 interface{}) bool {
+	b1, err := json.Marshal(v1)
+	if err != nil {
+		return false
+	}
+
+	b2, err := json.Marshal(v2)
+	if err != nil {
+		return false
+	}
+
+	return bytes.Equal(b1, b2)
 }

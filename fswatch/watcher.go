@@ -54,6 +54,11 @@ func (f *fsWatcher) loop(watcher *fsnotify.Watcher, h candy.WatcherHandleFunc) {
 				return
 			}
 
+			// Ignoring chmod
+			if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+				continue
+			}
+
 			candy.Log().Info("watched dir changed", zap.String("dir", f.Config.DomainDir), zap.String("file", event.Name), zap.Stringer("op", event.Op))
 			h()
 		case err, ok := <-watcher.Errors:
