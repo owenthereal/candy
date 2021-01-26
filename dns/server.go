@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -9,17 +10,19 @@ import (
 	"github.com/miekg/dns"
 	"github.com/oklog/run"
 	"github.com/owenthereal/candy"
+	"go.uber.org/zap"
 )
 
 type Config struct {
-	Addr string
-	TLDs []string
+	Addr    string
+	TLDs    []string
+	LocalIP bool
 }
 
 func New(cfg Config) candy.DNSServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &dnsServer{
-		Config: cfg,
+		cfg:    cfg,
 		udp:    &dns.Server{Addr: cfg.Addr, Net: "udp"},
 		tcp:    &dns.Server{Addr: cfg.Addr, Net: "tcp"},
 		ctx:    ctx,
@@ -28,7 +31,7 @@ func New(cfg Config) candy.DNSServer {
 }
 
 type dnsServer struct {
-	Config Config
+	cfg    Config
 	udp    *dns.Server
 	tcp    *dns.Server
 	ctx    context.Context
@@ -36,7 +39,7 @@ type dnsServer struct {
 }
 
 func (d *dnsServer) Start() error {
-	for _, tld := range d.Config.TLDs {
+	for _, tld := range d.cfg.TLDs {
 		dns.HandleFunc(tld+".", d.handleDNS)
 	}
 
@@ -84,25 +87,31 @@ func (d *dnsServer) Shutdown() error {
 }
 
 func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
-	var (
-		v4 bool
-		rr dns.RR
-		a  net.IP
-	)
-
 	dom := r.Question[0].Name
 
 	m := new(dns.Msg)
 	m.SetReply(r)
 
-	if ip, ok := w.RemoteAddr().(*net.UDPAddr); ok {
-		a = ip.IP
-		v4 = a.To4() != nil
+	var (
+		a   net.IP
+		err error
+	)
+
+	if d.cfg.LocalIP {
+		a, err = localV4IP()
+		if err != nil {
+			candy.Log().Error("error getting local v4 IP", zap.Error(err))
+			_ = w.WriteMsg(m)
+			return
+		}
+	} else {
+		a = clientIP(w)
 	}
-	if ip, ok := w.RemoteAddr().(*net.TCPAddr); ok {
-		a = ip.IP
-		v4 = a.To4() != nil
-	}
+
+	var (
+		rr dns.RR
+		v4 bool = a.To4() != nil
+	)
 
 	if v4 {
 		rr = &dns.A{
@@ -128,4 +137,59 @@ func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	_ = w.WriteMsg(m)
+}
+
+func clientIP(w dns.ResponseWriter) net.IP {
+	var a net.IP
+
+	if ip, ok := w.RemoteAddr().(*net.UDPAddr); ok {
+		a = ip.IP
+	}
+
+	if ip, ok := w.RemoteAddr().(*net.TCPAddr); ok {
+		a = ip.IP
+	}
+
+	return a
+}
+
+func localV4IP() (net.IP, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return nil, err
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+
+			ip = ip.To4()
+			if ip == nil {
+				continue // not an ipv4 address
+			}
+
+			return ip, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no external IP")
 }

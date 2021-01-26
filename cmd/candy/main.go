@@ -15,7 +15,7 @@ func main() {
 	tlds := []string{"meroxa"}
 
 	if err := os.MkdirAll(dir, 0o0644); err != nil {
-		candy.Log().Fatal("failed to start Candy server", zap.Error(err))
+		candy.Log().Fatal("failed to create Candy config directory", zap.Error(err))
 	}
 
 	svr := candy.Server{
@@ -27,8 +27,9 @@ func main() {
 			DomainDir: dir,
 		}),
 		DNS: dns.New(dns.Config{
-			Addr: ":25353",
-			TLDs: tlds,
+			Addr:    ":25353",
+			TLDs:    tlds,
+			LocalIP: true,
 		}),
 		Watcher: fswatch.New(fswatch.Config{DomainDir: dir}),
 	}
