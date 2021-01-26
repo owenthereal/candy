@@ -5,6 +5,16 @@ import (
 	"go.uber.org/zap"
 )
 
+type ServerConfig struct {
+	HostRoot   string   `mapstructure:"host-root"`
+	Domain     []string `mapstructure:"domain"`
+	HttpAddr   string   `mapstructure:"http-addr"`
+	HttpsAddr  string   `mapstructure:"https-addr"`
+	AdminAddr  string   `mapstructure:"admin-addr"`
+	DnsAddr    string   `mapstructure:"dns-addr"`
+	DnsLocalIp bool     `mapstructure:"dns-local-ip"`
+}
+
 type Server struct {
 	Proxy   ProxyServer
 	DNS     DNSServer
