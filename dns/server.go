@@ -17,6 +17,7 @@ type Config struct {
 	Addr    string
 	TLDs    []string
 	LocalIP bool
+	Logger  *zap.Logger
 }
 
 func New(cfg Config) candy.DNSServer {
@@ -39,6 +40,8 @@ type dnsServer struct {
 }
 
 func (d *dnsServer) Start() error {
+	d.cfg.Logger.Info("starting DNS server")
+
 	for _, tld := range d.cfg.TLDs {
 		dns.HandleFunc(tld+".", d.handleDNS)
 	}
@@ -73,7 +76,7 @@ func (d *dnsServer) Start() error {
 func (d *dnsServer) Shutdown() error {
 	defer d.cancel()
 
-	candy.Log().Info("shutting down DNS server")
+	d.cfg.Logger.Info("shutting down DNS server")
 
 	var merr *multierror.Error
 	if err := d.udp.Shutdown(); err != nil {
@@ -100,7 +103,7 @@ func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 	if d.cfg.LocalIP {
 		a, err = localV4IP()
 		if err != nil {
-			candy.Log().Error("error getting local v4 IP", zap.Error(err))
+			d.cfg.Logger.Error("error getting local v4 IP", zap.Error(err))
 			_ = w.WriteMsg(m)
 			return
 		}

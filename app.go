@@ -19,8 +19,8 @@ type App struct {
 }
 
 type AppServiceConfig struct {
-	TLDs      []string
-	DomainDir string
+	TLDs     []string
+	HostRoot string
 }
 
 func NewAppService(cfg AppServiceConfig) *AppService {
@@ -32,7 +32,7 @@ type AppService struct {
 }
 
 func (f *AppService) FindApps() ([]App, error) {
-	files, err := ioutil.ReadDir(f.cfg.DomainDir)
+	files, err := ioutil.ReadDir(f.cfg.HostRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (f *AppService) FindApps() ([]App, error) {
 			continue
 		}
 
-		b, err := ioutil.ReadFile(filepath.Join(f.cfg.DomainDir, file.Name()))
+		b, err := ioutil.ReadFile(filepath.Join(f.cfg.HostRoot, file.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,7 @@ func (f *AppService) parseApps(domain, data string) ([]App, error) {
 	}
 
 	// TODO: json
-	return nil, fmt.Errorf("invalid domain for file: %s", filepath.Join(f.cfg.DomainDir, domain))
+	return nil, fmt.Errorf("invalid domain for file: %s", filepath.Join(f.cfg.HostRoot, domain))
 }
 
 func (f *AppService) buildApps(domain, protocol, addr string) []App {

@@ -9,25 +9,28 @@ import (
 )
 
 type Config struct {
-	DomainDir string
+	HostRoot string
+	Logger   *zap.Logger
 }
 
 func New(cfg Config) candy.Watcher {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &fsWatcher{
-		Config: cfg,
+		cfg:    cfg,
 		ctx:    ctx,
 		cancel: cancel,
 	}
 }
 
 type fsWatcher struct {
-	Config Config
+	cfg    Config
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 func (f *fsWatcher) Watch(h candy.WatcherHandleFunc) error {
+	f.cfg.Logger.Info("starting watcher")
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -36,7 +39,7 @@ func (f *fsWatcher) Watch(h candy.WatcherHandleFunc) error {
 
 	go f.loop(watcher, h)
 
-	if err := watcher.Add(f.Config.DomainDir); err != nil {
+	if err := watcher.Add(f.cfg.HostRoot); err != nil {
 		return err
 	}
 
@@ -57,19 +60,21 @@ func (f *fsWatcher) loop(watcher *fsnotify.Watcher, h candy.WatcherHandleFunc) {
 				continue
 			}
 
-			candy.Log().Info("watched dir changed", zap.String("dir", f.Config.DomainDir), zap.String("file", event.Name), zap.Stringer("op", event.Op))
+			f.cfg.Logger.Info("watched dir changed", zap.String("dir", f.cfg.HostRoot), zap.String("file", event.Name), zap.Stringer("op", event.Op))
 			h()
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
 
-			candy.Log().Error("error watching dir", zap.String("dir", f.Config.DomainDir), zap.Error(err))
+			f.cfg.Logger.Error("error watching dir", zap.String("dir", f.cfg.HostRoot), zap.Error(err))
 		}
 	}
 }
 
 func (f *fsWatcher) Shutdown() error {
+	f.cfg.Logger.Info("shutting down watcher")
+
 	defer f.cancel()
 	return nil
 }

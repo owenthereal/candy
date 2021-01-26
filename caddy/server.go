@@ -18,6 +18,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"github.com/owenthereal/candy"
+	"go.uber.org/zap"
 )
 
 var (
@@ -29,7 +30,8 @@ type Config struct {
 	HTTPSAddr string
 	AdminAddr string
 	TLDs      []string
-	DomainDir string
+	HostRoot  string
+	Logger    *zap.Logger
 }
 
 func New(cfg Config) candy.ProxyServer {
@@ -38,8 +40,8 @@ func New(cfg Config) candy.ProxyServer {
 	return &caddyServer{
 		cfg: cfg,
 		apps: candy.NewAppService(candy.AppServiceConfig{
-			TLDs:      cfg.TLDs,
-			DomainDir: cfg.DomainDir,
+			TLDs:     cfg.TLDs,
+			HostRoot: cfg.HostRoot,
 		}),
 		ctx:    ctx,
 		cancel: cancel,
@@ -58,6 +60,8 @@ type caddyServer struct {
 }
 
 func (c *caddyServer) Start() error {
+	c.cfg.Logger.Info("starting Caddy server")
+
 	caddy.TrapSignals()
 
 	ccfg, err := c.loadConfig()
@@ -78,7 +82,7 @@ func (c *caddyServer) Start() error {
 }
 
 func (c *caddyServer) Reload() error {
-	candy.Log().Info("reloading Caddy server")
+	c.cfg.Logger.Info("reloading Caddy server")
 
 	ccfg, err := c.loadConfig()
 	if err != nil {
@@ -89,7 +93,7 @@ func (c *caddyServer) Reload() error {
 	defer c.caddyCfgMutex.Unlock()
 
 	if jsonEqual(c.caddyCfg, ccfg) {
-		candy.Log().Info("Caddy server unchanged")
+		c.cfg.Logger.Info("Caddy server unchanged")
 		return nil
 	}
 
@@ -103,7 +107,7 @@ func (c *caddyServer) Reload() error {
 }
 
 func (c *caddyServer) Shutdown() error {
-	candy.Log().Info("shutting down Caddy server")
+	c.cfg.Logger.Info("shutting down Caddy server")
 
 	defer c.cancel()
 

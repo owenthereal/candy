@@ -61,14 +61,19 @@ func runRunE(c *cobra.Command, args []string) error {
 			HTTPSAddr: ":443",
 			AdminAddr: "localhost:22019",
 			TLDs:      cfg.Domain,
-			DomainDir: cfg.HostRoot,
+			HostRoot:  cfg.HostRoot,
+			Logger:    candy.Log().Named("caddy"),
 		}),
 		DNS: dns.New(dns.Config{
 			Addr:    ":25353",
 			TLDs:    cfg.Domain,
 			LocalIP: cfg.DnsLocalIp,
+			Logger:  candy.Log().Named("dns"),
 		}),
-		Watcher: fswatch.New(fswatch.Config{DomainDir: cfg.HostRoot}),
+		Watcher: fswatch.New(fswatch.Config{
+			HostRoot: cfg.HostRoot,
+			Logger:   candy.Log().Named("fswatch"),
+		}),
 	}
 
 	return svr.Start()
