@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 type App struct {
@@ -37,10 +35,7 @@ func (f *AppService) FindApps() ([]App, error) {
 		return nil, err
 	}
 
-	var (
-		result []App
-		merr   *multierror.Error
-	)
+	var result []App
 
 	for _, file := range files {
 		if file.IsDir() {
@@ -54,14 +49,13 @@ func (f *AppService) FindApps() ([]App, error) {
 
 		apps, err := f.parseApps(file.Name(), strings.TrimSpace(string(b)))
 		if err != nil {
-			merr = multierror.Append(merr, err)
 			continue
 		}
 
 		result = append(result, apps...)
 	}
 
-	return result, err
+	return result, nil
 }
 
 func (f *AppService) parseApps(domain, data string) ([]App, error) {
@@ -71,16 +65,16 @@ func (f *AppService) parseApps(domain, data string) ([]App, error) {
 		return f.buildApps(domain, "http", fmt.Sprintf("127.0.0.1:%d", port)), nil
 	}
 
+	// http://ip:port
+	u, err := url.ParseRequestURI(data)
+	if err == nil {
+		return f.buildApps(domain, u.Scheme, u.Host), nil
+	}
+
 	// ip:port
 	host, sport, err := net.SplitHostPort(data)
 	if err == nil {
 		return f.buildApps(domain, "http", host+":"+sport), nil
-	}
-
-	// http://ip:port
-	u, err := url.Parse(data)
-	if err == nil {
-		return f.buildApps(domain, u.Scheme, u.Host), nil
 	}
 
 	// TODO: json
