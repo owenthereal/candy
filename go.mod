@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/go-cmp v0.5.4
 	github.com/hashicorp/go-multierror v1.0.0
+	github.com/inetaf/tcpproxy v0.0.0-20200125044825-b6bb9b5b8252
 	github.com/miekg/dns v1.1.35
 	github.com/oklog/run v1.0.0
 	github.com/spf13/cobra v1.1.1
