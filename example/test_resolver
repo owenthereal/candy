@@ -1,0 +1,5 @@
+domain test
+nameserver 127.0.0.1
+port 25353
+search_order 1
+timeout 5

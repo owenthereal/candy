@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>dev.candyproxy</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>candy</string>
+            <string>launch</string>
+            <string>--dns-local-ip</string>
+        </array>
+        <key>KeepAlive</key>
+        <true/>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>Sockets</key>
+        <dict>
+            <key>Socket</key>
+            <dict>
+                <key>SockNodeName</key>
+                <string>0.0.0.0</string>
+                <key>SockServiceName</key>
+                <string>80</string>
+            </dict>
+            <key>SocketTLS</key>
+            <dict>
+                <key>SockNodeName</key>
+                <string>0.0.0.0</string>
+                <key>SockServiceName</key>
+                <string>443</string>
+            </dict>
+        </dict>
+        <key>StandardOutPath</key>
+        <string>~/Library/Logs/candy.log</string>
+        <key>StandardErrorPath</key>
+        <string>~/Library/Logs/candy.log</string>
+    </dict>
+</plist>
