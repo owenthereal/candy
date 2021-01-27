@@ -1,5 +1,9 @@
 SHELL=/bin/bash -o pipefail
 
+.PHONY: install
+install:
+	go install ./cmd/candy/...
+
 .PHONY: build
 build:
 	go build -o build/candy -mod=vendor ./cmd/candy
@@ -10,4 +14,4 @@ vet:
 
 .PHONY: test
 test:
-	go test ./... -timeout=120s -coverprofile=c.out -covermode=atomic -mod=vendor -count=1 -race -v
+	go test ./... -timeout=180s -coverprofile=c.out -covermode=atomic -mod=vendor -count=1 -race -v
