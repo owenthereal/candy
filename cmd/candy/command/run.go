@@ -31,7 +31,8 @@ func addServerFlags(cmd *cobra.Command) {
 	cmd.Flags().String("http-addr", ":80", "The Proxy server HTTP address")
 	cmd.Flags().String("https-addr", ":443", "The Proxy server HTTPS address")
 	cmd.Flags().String("admin-addr", "127.0.0.1:22019", "The Proxy server administrative address")
-	cmd.Flags().String("dns-addr", ":25353", "The DNS server address")
+	cmd.Flags().String("dns-udp-addr", ":25353", "The DNS server UDP address")
+	cmd.Flags().String("dns-tcp-addr", ":25353", "The DNS server TCP address")
 	cmd.Flags().Bool("dns-local-ip", false, "DNS server responds DNS queries with local IP instead of 127.0.0.1")
 }
 
@@ -50,7 +51,8 @@ func startServer(c *cobra.Command) error {
 			"http-addr",
 			"https-addr",
 			"admin-addr",
-			"dns-addr",
+			"dns-udp-addr",
+			"dns-tcp-addr",
 		},
 		&cfg,
 	); err != nil {
@@ -73,7 +75,8 @@ func startServer(c *cobra.Command) error {
 			Logger:    candy.Log().Named("caddy"),
 		}),
 		DNS: dns.New(dns.Config{
-			Addr:    ":25353",
+			UDPAddr: cfg.DnsUdpAddr,
+			TCPAddr: cfg.DnsTcpAddr,
 			TLDs:    cfg.Domain,
 			LocalIP: cfg.DnsLocalIp,
 			Logger:  candy.Log().Named("dns"),

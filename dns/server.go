@@ -14,7 +14,8 @@ import (
 )
 
 type Config struct {
-	Addr    string
+	UDPAddr string
+	TCPAddr string
 	TLDs    []string
 	LocalIP bool
 	Logger  *zap.Logger
@@ -24,8 +25,8 @@ func New(cfg Config) candy.DNSServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &dnsServer{
 		cfg:    cfg,
-		udp:    &dns.Server{Addr: cfg.Addr, Net: "udp"},
-		tcp:    &dns.Server{Addr: cfg.Addr, Net: "tcp"},
+		udp:    &dns.Server{Addr: cfg.UDPAddr, Net: "udp"},
+		tcp:    &dns.Server{Addr: cfg.TCPAddr, Net: "tcp"},
 		ctx:    ctx,
 		cancel: cancel,
 	}

@@ -11,7 +11,8 @@ type ServerConfig struct {
 	HttpAddr   string   `mapstructure:"http-addr"`
 	HttpsAddr  string   `mapstructure:"https-addr"`
 	AdminAddr  string   `mapstructure:"admin-addr"`
-	DnsAddr    string   `mapstructure:"dns-addr"`
+	DnsUdpAddr string   `mapstructure:"dns-udp-addr"`
+	DnsTcpAddr string   `mapstructure:"dns-tcp-addr"`
 	DnsLocalIp bool     `mapstructure:"dns-local-ip"`
 }
 
