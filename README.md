@@ -27,7 +27,7 @@ $ curl https://myapp.test
 
 ## Installation
 
-# Mac
+### Mac
 
 ```
 brew install owenthereal/candy/candy
