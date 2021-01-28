@@ -35,7 +35,7 @@ brew install owenthereal/candy/candy
 
 You need to create a [DNS resolver](https://www.unix.com/man-page/opendarwin/5/resolver/) file in `/etc/resolver/YOUR_DOMAIN`.
 Creating the `/etc/resolver` directory requires superuser privileges.
-You can set everything up with an one-liner:
+You can set everything up with a one-liner:
 
 ```
 sudo candy setup
