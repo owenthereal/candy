@@ -73,7 +73,7 @@ func startServer(c *cobra.Command) error {
 			Logger:    candy.Log().Named("caddy"),
 		}),
 		DNS: dns.New(dns.Config{
-			Addr:    ":25353",
+			Addr:    cfg.DnsAddr,
 			TLDs:    cfg.Domain,
 			LocalIP: cfg.DnsLocalIp,
 			Logger:  candy.Log().Named("dns"),
