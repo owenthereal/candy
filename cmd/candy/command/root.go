@@ -32,6 +32,9 @@ func Root() *cobra.Command {
 	if launch := Launch(); launch != nil {
 		rootCmd.AddCommand(launch)
 	}
+	if setup := Setup(); setup != nil {
+		rootCmd.AddCommand(setup)
+	}
 
 	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(homeDir, ".candyconfig"), "Config file")
 
