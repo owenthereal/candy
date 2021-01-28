@@ -59,7 +59,7 @@ func startServer(c *cobra.Command) error {
 
 	candy.Log().Info("using config", zap.Reflect("config", cfg))
 
-	if err := os.MkdirAll(cfg.HostRoot, 0o0644); err != nil {
+	if err := os.MkdirAll(cfg.HostRoot, 0o0755); err != nil {
 		return fmt.Errorf("failed to create host directory: %w", err)
 	}
 
