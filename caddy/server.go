@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -60,7 +61,7 @@ type caddyServer struct {
 }
 
 func (c *caddyServer) Start() error {
-	c.cfg.Logger.Info("starting Caddy server")
+	c.cfg.Logger.Info("starting Caddy server", zap.Reflect("cfg", c.cfg))
 
 	caddy.TrapSignals()
 
@@ -161,7 +162,17 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		Listen: []string{c.cfg.HTTPSAddr},
 	}
 
+	// Best efforts of parsing corresponding port from addr
+	// If they are 0, Caddy will use the default ports
+	// See https://caddyserver.com/docs/json/apps/http/http_port
+	_, httpPortStr, _ := net.SplitHostPort(c.cfg.HTTPAddr)
+	_, httpsPortStr, _ := net.SplitHostPort(c.cfg.HTTPSAddr)
+	httpPort, _ := strconv.Atoi(httpPortStr)
+	httpsPort, _ := strconv.Atoi(httpsPortStr)
+
 	httpApp := caddyhttp.App{
+		HTTPPort:  httpPort,
+		HTTPSPort: httpsPort,
 		Servers: map[string]*caddyhttp.Server{
 			"http":  httpServer,
 			"https": httpsServer,

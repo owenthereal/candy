@@ -29,7 +29,7 @@ type fsWatcher struct {
 }
 
 func (f *fsWatcher) Watch(h candy.WatcherHandleFunc) error {
-	f.cfg.Logger.Info("starting watcher")
+	f.cfg.Logger.Info("starting watcher", zap.Reflect("cfg", f.cfg))
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

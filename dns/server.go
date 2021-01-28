@@ -40,7 +40,7 @@ type dnsServer struct {
 }
 
 func (d *dnsServer) Start() error {
-	d.cfg.Logger.Info("starting DNS server")
+	d.cfg.Logger.Info("starting DNS server", zap.Reflect("cfg", d.cfg))
 
 	for _, tld := range d.cfg.TLDs {
 		dns.HandleFunc(tld+".", d.handleDNS)
