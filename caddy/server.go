@@ -150,13 +150,22 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		hosts = append(hosts, app.Host)
 	}
 
-	server := &caddyhttp.Server{
+	httpServer := &caddyhttp.Server{
+		Routes:    routes,
+		Listen:    []string{c.cfg.HTTPAddr},
+		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: true},
+	}
+
+	httpsServer := &caddyhttp.Server{
 		Routes: routes,
-		Listen: []string{c.cfg.HTTPAddr, c.cfg.HTTPSAddr},
+		Listen: []string{c.cfg.HTTPSAddr},
 	}
 
 	httpApp := caddyhttp.App{
-		Servers: map[string]*caddyhttp.Server{"candy": server},
+		Servers: map[string]*caddyhttp.Server{
+			"http":  httpServer,
+			"https": httpsServer,
+		},
 	}
 
 	tls := caddytls.TLS{
