@@ -61,7 +61,7 @@ type caddyServer struct {
 }
 
 func (c *caddyServer) Start() error {
-	c.cfg.Logger.Info("starting Caddy server")
+	c.cfg.Logger.Info("starting Caddy server", zap.Reflect("cfg", c.cfg))
 
 	caddy.TrapSignals()
 

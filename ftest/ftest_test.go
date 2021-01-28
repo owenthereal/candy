@@ -18,14 +18,13 @@ import (
 	"github.com/owenthereal/candy/caddy"
 	"github.com/owenthereal/candy/dns"
 	"github.com/owenthereal/candy/fswatch"
-	"go.uber.org/zap"
 )
 
 func Test_Server(t *testing.T) {
 	var (
 		hostRoot  = t.TempDir()
-		httpAddr  = ":" + randomPort(t)
-		httpsAddr = ":" + randomPort(t)
+		httpAddr  = "127.0.0.1:" + randomPort(t)
+		httpsAddr = "127.0.0.1:" + randomPort(t)
 		adminAddr = "127.0.0.1:" + randomPort(t)
 		dnsAddr   = "127.0.0.1:" + randomPort(t)
 		tlds      = []string{"go-test"}
@@ -41,19 +40,19 @@ func Test_Server(t *testing.T) {
 		AdminAddr: adminAddr,
 		TLDs:      tlds,
 		HostRoot:  hostRoot,
-		Logger:    zap.NewNop(),
+		Logger:    candy.Log().Named("caddy"),
 	}
 	dnsCfg := dns.Config{
 		Addr:   dnsAddr,
 		TLDs:   tlds,
-		Logger: zap.NewNop(),
+		Logger: candy.Log().Named("dns"),
 	}
 	svr := candy.Server{
 		Proxy: caddy.New(caddyCfg),
 		DNS:   dns.New(dnsCfg),
 		Watcher: fswatch.New(fswatch.Config{
 			HostRoot: hostRoot,
-			Logger:   zap.NewNop(),
+			Logger:   candy.Log().Named("fswatcher"),
 		}),
 	}
 
