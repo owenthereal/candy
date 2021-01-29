@@ -33,24 +33,24 @@ $ curl https://myapp.test
 brew install owenthereal/candy/candy
 ```
 
-#### Setup
-
-You need to create a [DNS resolver](https://www.unix.com/man-page/opendarwin/5/resolver/) file in `/etc/resolver/YOUR_DOMAIN`.
-Creating the `/etc/resolver` directory requires superuser privileges.
-You can set everything up with a one-liner:
+After installing the `candy` binary, you also need to create a [DNS resolver](https://www.unix.com/man-page/opendarwin/5/resolver/) file in `/etc/resolver/YOUR_DOMAIN`.
+Creating the `/etc/resolver` directory requires superuser privileges. You can execute with a one-liner:
 
 ```
 sudo candy setup
 ```
 
-Alternatively, you can execute the followings:
+Alternatively, you can manually execute the followings:
 
 ```
-git clone https://github.com/owenthereal/candy
-cd candy
-sudo mkdir -p /etc/resolver && \
-  sudo chown -R $(whoami):$(id -g -n) /etc/resolver && \
-  cp example/test_resolver /etc/resolver/candy-test
+sudo mkdir -p /etc/resolver && sudo chown -R $(whoami):$(id -g -n) /etc/resolver
+cat<<EOS >/etc/resolver/candy-test
+domain test
+nameserver 127.0.0.1
+port 25353
+search_order 1
+timeout 5
+EOS
 ```
 
 ### Linux
@@ -75,6 +75,12 @@ To restart Candy, run:
 brew services restart candy
 ```
 
+To stop Candy, run:
+
+```
+brew services stop candy
+```
+
 Or, if you don't want/need a background service, you can just run:
 
 ```
@@ -85,9 +91,9 @@ candy run
 
 TODO
 
-### Port proxying
+### Port/IP proxying
 
-Candy's port proxying feature lets you route all web traffic on a particular hostname to another port or IP address.
+Candy's port/IP proxying feature lets you route all web traffic on a particular hostname to another port or IP address.
 To use it, create a file in `~/.candy` with the the destination port number or IP address as its contents:
 
 ```
@@ -113,7 +119,11 @@ For example, you may want to have multiple top-leveled domains besides `*.test`:
 ```
 
 Changing the `domain` setting requires resetting DNS resolvers in `/etc/resolver`.
-Rerun the [setup step](#setup).
+Rerun the [setup step](#setup) with all the matching domains:
+
+```
+sudo candy setup --domain test --domain mydomain
+```
 
 After changing a setting in `~/.candyconfig`, you will need to [restart](#starting-candy) Candy for the change to take effect:
 
