@@ -1,4 +1,4 @@
-package ftest
+package server
 
 import (
 	"context"
@@ -14,10 +14,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/owenthereal/candy"
-	"github.com/owenthereal/candy/caddy"
-	"github.com/owenthereal/candy/dns"
-	"github.com/owenthereal/candy/fswatch"
 )
 
 func Test_Server(t *testing.T) {
@@ -34,30 +30,17 @@ func Test_Server(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caddyCfg := caddy.Config{
-		HTTPAddr:  httpAddr,
-		HTTPSAddr: httpsAddr,
-		AdminAddr: adminAddr,
-		TLDs:      tlds,
+	svr := New(Config{
 		HostRoot:  hostRoot,
-		Logger:    candy.Log().Named("caddy"),
-	}
-	dnsCfg := dns.Config{
-		Addr:   dnsAddr,
-		TLDs:   tlds,
-		Logger: candy.Log().Named("dns"),
-	}
-	svr := candy.Server{
-		Proxy: caddy.New(caddyCfg),
-		DNS:   dns.New(dnsCfg),
-		Watcher: fswatch.New(fswatch.Config{
-			HostRoot: hostRoot,
-			Logger:   candy.Log().Named("fswatcher"),
-		}),
-	}
+		Domain:    tlds,
+		HttpAddr:  httpAddr,
+		HttpsAddr: httpsAddr,
+		AdminAddr: adminAddr,
+		DnsAddr:   dnsAddr,
+	})
 
 	go func() {
-		if err := svr.Start(); err != nil {
+		if err := svr.Run(context.Background()); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -188,6 +171,92 @@ func Test_Server(t *testing.T) {
 			return nil
 		})
 	})
+}
+
+func Test_Server_Shutdown(t *testing.T) {
+	var (
+		hostRoot  = t.TempDir()
+		httpAddr  = "127.0.0.1:" + randomPort(t)
+		httpsAddr = "127.0.0.1:" + randomPort(t)
+		adminAddr = "127.0.0.1:" + randomPort(t)
+		dnsAddr   = "127.0.0.1:" + randomPort(t)
+		tlds      = []string{"go-test"}
+	)
+
+	cases := []struct {
+		Name       string
+		Config     Config
+		WantErrMsg string
+	}{
+		{
+			Name: "invalid dns addr",
+			Config: Config{
+				HostRoot:  hostRoot,
+				Domain:    tlds,
+				HttpAddr:  httpAddr,
+				HttpsAddr: httpsAddr,
+				AdminAddr: adminAddr,
+				DnsAddr:   "invalid-addr",
+			},
+			WantErrMsg: "address invalid-addr: missing port in address",
+		},
+		{
+			Name: "invalid http addr",
+			Config: Config{
+				HostRoot:  hostRoot,
+				Domain:    tlds,
+				HttpAddr:  "invalid-addr",
+				HttpsAddr: httpsAddr,
+				AdminAddr: adminAddr,
+				DnsAddr:   dnsAddr,
+			},
+			WantErrMsg: "address invalid-addr: missing port in address",
+		},
+		{
+			Name: "invalid admin addr",
+			Config: Config{
+				HostRoot:  hostRoot,
+				Domain:    tlds,
+				HttpAddr:  httpAddr,
+				HttpsAddr: httpsAddr,
+				AdminAddr: "invalid-addr",
+				DnsAddr:   dnsAddr,
+			},
+			WantErrMsg: "address invalid-addr: missing port in address",
+		},
+		{
+			Name: "invalid host root",
+			Config: Config{
+				HostRoot:  "invalid-host-root",
+				Domain:    tlds,
+				HttpAddr:  httpAddr,
+				HttpsAddr: httpsAddr,
+				AdminAddr: adminAddr,
+				DnsAddr:   dnsAddr,
+			},
+			WantErrMsg: "invalid-host-root: no such file or directory",
+		},
+	}
+
+	for _, c := range cases {
+		cc := c
+		t.Run(cc.Name, func(t *testing.T) {
+			errch := make(chan error)
+			srv := New(cc.Config)
+			go func() {
+				errch <- srv.Run(context.Background())
+			}()
+
+			select {
+			case <-time.After(5 * time.Second):
+				t.Fatal("error wait time out")
+			case err := <-errch:
+				if want, got := cc.WantErrMsg, err.Error(); !strings.Contains(got, want) {
+					t.Fatalf("got error does not contain want string: want=%s, got=%s", want, got)
+				}
+			}
+		})
+	}
 }
 
 func randomPort(t *testing.T) string {
