@@ -1,4 +1,4 @@
-# Candy
+# Candy ![gopher_with_candy](https://raw.githubusercontent.com/egonelbre/gophers/master/.thumb/sketch/misc/with-candy.png)
 
 Candy is a zero-config reverse proxy server.
 It makes proxying applications with local top-leveled domains as frictionless as possible.
