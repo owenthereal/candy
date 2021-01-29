@@ -2,6 +2,8 @@ package watch
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/owenthereal/candy"
@@ -52,7 +54,12 @@ func (f *watcher) Run(ctx context.Context) error {
 				continue
 			}
 
-			f.cfg.Logger.Info("watched dir changed", zap.String("dir", f.cfg.HostRoot), zap.String("file", event.Name), zap.Stringer("op", event.Op))
+			// Host root is removed
+			if event.Op&fsnotify.Remove == fsnotify.Remove && filepath.Clean(event.Name) == filepath.Clean(f.cfg.HostRoot) {
+				return fmt.Errorf("host root %s was removed", f.cfg.HostRoot)
+			}
+
+			f.cfg.Logger.Info("watched dir changed", zap.String("dir", f.cfg.HostRoot), zap.Any("evt", event))
 			f.cfg.HandleFunc()
 		case err, ok := <-watcher.Errors:
 			if !ok {

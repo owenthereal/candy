@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -38,11 +38,9 @@ func Test_Server(t *testing.T) {
 		AdminAddr: adminAddr,
 		DnsAddr:   dnsAddr,
 	})
-
+	errch := make(chan error)
 	go func() {
-		if err := svr.Run(context.Background()); err != nil {
-			log.Fatal(err)
-		}
+		errch <- svr.Run(context.Background())
 	}()
 
 	t.Run("http addr", func(t *testing.T) {
@@ -170,6 +168,21 @@ func Test_Server(t *testing.T) {
 
 			return nil
 		})
+	})
+
+	t.Run("remove host root", func(t *testing.T) {
+		if err := os.RemoveAll(hostRoot); err != nil {
+			t.Fatal(err)
+		}
+
+		select {
+		case <-time.After(5 * time.Second):
+			t.Fatal("error wait time out")
+		case err := <-errch:
+			if want, got := fmt.Sprintf("host root %s was removed", hostRoot), err.Error(); want != got {
+				t.Fatalf("unexpected error: want=%s got=%s", want, got)
+			}
+		}
 	})
 }
 
