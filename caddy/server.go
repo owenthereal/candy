@@ -60,8 +60,25 @@ type caddyServer struct {
 	cancel context.CancelFunc
 }
 
-func (c *caddyServer) Start() error {
-	c.cfg.Logger.Info("starting Caddy server", zap.Reflect("cfg", c.cfg))
+func (c *caddyServer) Run(ctx context.Context) error {
+	if err := c.startServer(); err != nil {
+		return err
+	}
+
+	<-ctx.Done()
+
+	if err := c.stopServer(); err != nil {
+		return err
+	}
+
+	return ctx.Err()
+}
+
+func (c *caddyServer) startServer() error {
+	c.cfg.Logger.Info("starting Caddy server", zap.Any("cfg", c.cfg))
+
+	c.caddyCfgMutex.Lock()
+	defer c.caddyCfgMutex.Unlock()
 
 	caddy.TrapSignals()
 
@@ -70,28 +87,27 @@ func (c *caddyServer) Start() error {
 		return fmt.Errorf("error loading Caddy config: %w", err)
 	}
 
-	c.caddyCfgMutex.Lock()
 	c.caddyCfg = ccfg
-	c.caddyCfgMutex.Unlock()
 
-	if err := caddy.Run(ccfg); err != nil {
-		return err
-	}
+	return caddy.Run(ccfg)
+}
 
-	<-c.ctx.Done()
-	return c.ctx.Err()
+func (c *caddyServer) stopServer() error {
+	c.cfg.Logger.Info("shutting down Caddy server")
+
+	return c.apiRequest(context.Background(), http.MethodPost, "/stop", nil)
 }
 
 func (c *caddyServer) Reload() error {
 	c.cfg.Logger.Info("reloading Caddy server")
 
+	c.caddyCfgMutex.Lock()
+	defer c.caddyCfgMutex.Unlock()
+
 	ccfg, err := c.loadConfig()
 	if err != nil {
 		return fmt.Errorf("error reloading Caddy config: %w", err)
 	}
-
-	c.caddyCfgMutex.Lock()
-	defer c.caddyCfgMutex.Unlock()
 
 	if jsonEqual(c.caddyCfg, ccfg) {
 		c.cfg.Logger.Info("Caddy server unchanged")
@@ -105,14 +121,6 @@ func (c *caddyServer) Reload() error {
 	c.caddyCfg = ccfg
 
 	return nil
-}
-
-func (c *caddyServer) Shutdown() error {
-	c.cfg.Logger.Info("shutting down Caddy server")
-
-	defer c.cancel()
-
-	return c.apiRequest(c.ctx, http.MethodPost, "/stop", nil)
 }
 
 func (c *caddyServer) loadConfig() (*caddy.Config, error) {

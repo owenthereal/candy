@@ -1,14 +1,13 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/owenthereal/candy"
-	"github.com/owenthereal/candy/caddy"
-	"github.com/owenthereal/candy/dns"
-	"github.com/owenthereal/candy/fswatch"
+	"github.com/owenthereal/candy/server"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -40,7 +39,7 @@ func runRunE(c *cobra.Command, args []string) error {
 }
 
 func startServer(c *cobra.Command) error {
-	var cfg candy.ServerConfig
+	var cfg server.Config
 	if err := candy.LoadConfig(
 		flagRootCfgFile,
 		c,
@@ -57,32 +56,13 @@ func startServer(c *cobra.Command) error {
 		return err
 	}
 
-	candy.Log().Info("using config", zap.Reflect("config", cfg))
+	candy.Log().Info("using config", zap.Any("cfg", cfg))
 
 	if err := os.MkdirAll(cfg.HostRoot, 0o0755); err != nil {
 		return fmt.Errorf("failed to create host directory: %w", err)
 	}
 
-	svr := candy.Server{
-		Proxy: caddy.New(caddy.Config{
-			HTTPAddr:  cfg.HttpAddr,
-			HTTPSAddr: cfg.HttpsAddr,
-			AdminAddr: cfg.AdminAddr,
-			TLDs:      cfg.Domain,
-			HostRoot:  cfg.HostRoot,
-			Logger:    candy.Log().Named("caddy"),
-		}),
-		DNS: dns.New(dns.Config{
-			Addr:    cfg.DnsAddr,
-			TLDs:    cfg.Domain,
-			LocalIP: cfg.DnsLocalIp,
-			Logger:  candy.Log().Named("dns"),
-		}),
-		Watcher: fswatch.New(fswatch.Config{
-			HostRoot: cfg.HostRoot,
-			Logger:   candy.Log().Named("fswatch"),
-		}),
-	}
+	svr := server.New(cfg)
 
-	return svr.Start()
+	return svr.Run(context.Background())
 }

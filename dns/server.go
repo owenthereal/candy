@@ -6,7 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/miekg/dns"
 	"github.com/oklog/run"
 	"github.com/owenthereal/candy"
@@ -21,26 +20,18 @@ type Config struct {
 }
 
 func New(cfg Config) candy.DNSServer {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &dnsServer{
-		cfg:    cfg,
-		udp:    &dns.Server{Addr: cfg.Addr, Net: "udp"},
-		tcp:    &dns.Server{Addr: cfg.Addr, Net: "tcp"},
-		ctx:    ctx,
-		cancel: cancel,
+		cfg: cfg,
 	}
 }
 
 type dnsServer struct {
-	cfg    Config
-	udp    *dns.Server
-	tcp    *dns.Server
-	ctx    context.Context
-	cancel context.CancelFunc
+	cfg Config
 }
 
-func (d *dnsServer) Start() error {
-	d.cfg.Logger.Info("starting DNS server", zap.Reflect("cfg", d.cfg))
+func (d *dnsServer) Run(ctx context.Context) error {
+	d.cfg.Logger.Info("starting DNS server", zap.Any("cfg", d.cfg))
+	defer d.cfg.Logger.Info("shutting down DNS server")
 
 	for _, tld := range d.cfg.TLDs {
 		dns.HandleFunc(tld+".", d.handleDNS)
@@ -48,45 +39,32 @@ func (d *dnsServer) Start() error {
 
 	var g run.Group
 	{
+		udp := &dns.Server{Addr: d.cfg.Addr, Net: "udp"}
 		g.Add(func() error {
-			return d.udp.ListenAndServe()
+			return udp.ListenAndServe()
 		}, func(err error) {
-			_ = d.Shutdown()
+			_ = udp.Shutdown()
 		})
 	}
 	{
+		tcp := &dns.Server{Addr: d.cfg.Addr, Net: "tcp"}
 		g.Add(func() error {
-			return d.tcp.ListenAndServe()
+			return tcp.ListenAndServe()
 		}, func(err error) {
-			_ = d.Shutdown()
+			_ = tcp.Shutdown()
 		})
 	}
 	{
+		ctx, cancel := context.WithCancel(ctx)
 		g.Add(func() error {
-			<-d.ctx.Done()
-			return d.ctx.Err()
+			<-ctx.Done()
+			return ctx.Err()
 		}, func(err error) {
-			_ = d.Shutdown()
+			cancel()
 		})
 	}
 
 	return g.Run()
-}
-
-func (d *dnsServer) Shutdown() error {
-	defer d.cancel()
-
-	d.cfg.Logger.Info("shutting down DNS server")
-
-	var merr *multierror.Error
-	if err := d.udp.Shutdown(); err != nil {
-		merr = multierror.Append(merr, err)
-	}
-	if err := d.tcp.Shutdown(); err != nil {
-		merr = multierror.Append(merr, err)
-	}
-
-	return merr
 }
 
 func (d *dnsServer) handleDNS(w dns.ResponseWriter, r *dns.Msg) {

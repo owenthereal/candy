@@ -2,25 +2,21 @@ package candy
 
 import (
 	"github.com/caddyserver/caddy/v2"
+	"github.com/owenthereal/candy/runnable"
 	"go.uber.org/zap"
 )
 
 type ProxyServer interface {
-	Start() error
+	runnable.Runable
 	Reload() error
-	Shutdown() error
 }
 
 type DNSServer interface {
-	Start() error
-	Shutdown() error
+	runnable.Runable
 }
 
-type WatcherHandleFunc func()
-
 type Watcher interface {
-	Watch(WatcherHandleFunc) error
-	Shutdown() error
+	runnable.Runable
 }
 
 func Log() *zap.Logger {
