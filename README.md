@@ -1,4 +1,4 @@
-# Candy
+# Candy ![gopher_with_candy](https://raw.githubusercontent.com/egonelbre/gophers/master/.thumb/sketch/misc/with-candy.png)
 
 Candy is a zero-config reverse proxy server.
 It makes proxying applications with local top-leveled domains as frictionless as possible.
@@ -33,6 +33,8 @@ $ curl https://myapp.test
 brew install owenthereal/candy/candy
 ```
 
+#### Setup
+
 You need to create a [DNS resolver](https://www.unix.com/man-page/opendarwin/5/resolver/) file in `/etc/resolver/YOUR_DOMAIN`.
 Creating the `/etc/resolver` directory requires superuser privileges.
 You can set everything up with a one-liner:
@@ -51,14 +53,26 @@ sudo mkdir -p /etc/resolver && \
   cp example/test_resolver /etc/resolver/candy-test
 ```
 
+### Linux
+
+TODO
+
 ## Usage
 
 ### Starting Candy
 
+#### Mac
+
 To have [Launchd](https://en.wikipedia.org/wiki/Launchd) start Candy and restart at login:
 
 ```
-brew servies start candy
+brew services start candy
+```
+
+To restart Candy, run:
+
+```
+brew services restart candy
 ```
 
 Or, if you don't want/need a background service, you can just run:
@@ -66,6 +80,10 @@ Or, if you don't want/need a background service, you can just run:
 ```
 candy run
 ```
+
+#### Linux
+
+TODO
 
 ### Port proxying
 
@@ -95,17 +113,9 @@ For example, you may want to have multiple top-leveled domains besides `*.test`:
 ```
 
 Changing the `domain` setting requires resetting DNS resolvers in `/etc/resolver`.
-Rerun the setup step with:
+Rerun the [setup step](#setup).
 
-```
-sudo candy setup
-```
-
-After changing a setting in `~/.candyconfig`, you will need to restart Candy for the change to take effect:
-
-```
-brew services restart candy
-```
+After changing a setting in `~/.candyconfig`, you will need to [restart](#starting-candy) Candy for the change to take effect:
 
 ## Prior Arts
 
