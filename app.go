@@ -11,9 +11,8 @@ import (
 )
 
 type App struct {
-	Host     string
-	Protocol string
-	Addr     string
+	Host string
+	Addr string
 }
 
 type AppServiceConfig struct {
@@ -62,32 +61,31 @@ func (f *AppService) parseApps(domain, data string) ([]App, error) {
 	// port
 	port, err := strconv.Atoi(data)
 	if err == nil {
-		return f.buildApps(domain, "http", fmt.Sprintf("127.0.0.1:%d", port)), nil
+		return f.buildApps(domain, fmt.Sprintf("127.0.0.1:%d", port)), nil
 	}
 
 	// http://ip:port
 	u, err := url.ParseRequestURI(data)
 	if err == nil {
-		return f.buildApps(domain, u.Scheme, u.Host), nil
+		return f.buildApps(domain, u.Host), nil
 	}
 
 	// ip:port
 	host, sport, err := net.SplitHostPort(data)
 	if err == nil {
-		return f.buildApps(domain, "http", host+":"+sport), nil
+		return f.buildApps(domain, host+":"+sport), nil
 	}
 
 	// TODO: json
 	return nil, fmt.Errorf("invalid domain for file: %s", filepath.Join(f.cfg.HostRoot, domain))
 }
 
-func (f *AppService) buildApps(domain, protocol, addr string) []App {
+func (f *AppService) buildApps(domain, addr string) []App {
 	var apps []App
 	for _, tld := range f.cfg.TLDs {
 		apps = append(apps, App{
-			Host:     domain + "." + tld, // e.g., app.test
-			Protocol: protocol,
-			Addr:     addr,
+			Host: domain + "." + tld, // e.g., app.test
+			Addr: addr,
 		})
 	}
 

@@ -289,7 +289,7 @@ func caddyRoutes(tr reverseproxy.HTTPTransport, apps []candy.App) []caddyhttp.Ro
 
 	for _, app := range apps {
 		handler := reverseproxy.Handler{
-			TransportRaw: caddyconfig.JSONModuleObject(tr, "protocol", app.Protocol, nil),
+			TransportRaw: caddyconfig.JSONModuleObject(tr, "protocol", "http", nil),
 			Upstreams:    reverseproxy.UpstreamPool{{Dial: app.Addr}},
 		}
 		route := caddyhttp.Route{
