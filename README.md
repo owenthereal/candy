@@ -44,14 +44,13 @@ Alternatively, you can manually execute the followings:
 
 ```
 sudo mkdir -p /etc/resolver
-sudo chown -R $(whoami):$(id -g -n) /etc/resolver
-cat<<EOS >/etc/resolver/candy-test
+cat<<EOF | sudo tee /etc/resolver/candy-test > /dev/null
 domain test
 nameserver 127.0.0.1
 port 25353
 search_order 1
 timeout 5
-EOS
+EOF
 sudo killall -HUP mDNSResponder # Flush DNS cache
 ```
 
@@ -61,12 +60,11 @@ Alternatively, you can manually execute the followings:
 
 ```
 sudo mkdir -p /etc/systemd/resolved.conf.d
-sudo chown -R $(whoami):$(id -g -n) /etc/systemd/resolved.conf.d
-cat<<EOS >/etc/systemd/resolved.conf.d/01-candy.conf
+cat<<EOF | sudo tee /etc/systemd/resolved.conf.d/01-candy.conf > /dev/null
 [Resolve]
 DNS=127.0.0.1:25353
 Domains=test
-EOS
+EOF
 sudo systemctl restart systemd-resolved # Restart resolved
 ```
 
