@@ -33,8 +33,8 @@ $ curl https://myapp.test
 brew install owenthereal/candy/candy
 ```
 
-After installing the `candy` binary, you also need to create a [DNS resolver](https://www.unix.com/man-page/opendarwin/5/resolver/) file in `/etc/resolver/YOUR_DOMAIN`.
-Creating the `/etc/resolver` directory requires superuser privileges. You can execute with a one-liner:
+After installing the `candy` binary, you also need to create a [DNS resolver config](https://www.unix.com/man-page/opendarwin/5/resolver/) in `/etc/resolver/CONFIG`.
+Creating the `/etc/resolver` directory and the config file require superuser privileges. You can execute with a one-liner:
 
 ```
 sudo candy setup
@@ -43,19 +43,41 @@ sudo candy setup
 Alternatively, you can manually execute the followings:
 
 ```
-sudo mkdir -p /etc/resolver && sudo chown -R $(whoami):$(id -g -n) /etc/resolver
-cat<<EOS >/etc/resolver/candy-test
+sudo mkdir -p /etc/resolver
+cat<<EOF | sudo tee /etc/resolver/candy-test > /dev/null
 domain test
 nameserver 127.0.0.1
 port 25353
 search_order 1
 timeout 5
-EOS
+EOF
+sudo killall -HUP mDNSResponder # Flush DNS cache
 ```
 
 ### Linux
 
-TODO
+```
+go get -u github.com/owenthereal/candy/cmd/candy
+```
+
+After installing the `candy` binary, you also need to create a [network name resolution config](https://www.freedesktop.org/software/systemd/man/resolved.conf.html) in `/usr/lib/systemd/resolved.conf.d/CONFIG`.
+Creating the `/usr/lib/systemd/resolved.conf.d` directory and the config file require superuser privileges. You can execute with a one-liner:
+
+```
+sudo candy setup
+```
+
+Alternatively, you can manually execute the followings:
+
+```
+sudo mkdir -p /usr/lib/systemd/resolved.conf.d
+cat<<EOF | sudo tee /usr/lib/systemd/resolved.conf.d/01-candy.conf > /dev/null
+[Resolve]
+DNS=127.0.0.1:25353
+Domains=test
+EOF
+sudo systemctl restart systemd-resolved # Restart systemd-resolved
+```
 
 ## Usage
 
