@@ -43,7 +43,8 @@ sudo candy setup
 Alternatively, you can manually execute the followings:
 
 ```
-sudo mkdir -p /etc/resolver && sudo chown -R $(whoami):$(id -g -n) /etc/resolver
+sudo mkdir -p /etc/resolver
+sudo chown -R $(whoami):$(id -g -n) /etc/resolver
 cat<<EOS >/etc/resolver/candy-test
 domain test
 nameserver 127.0.0.1
@@ -51,11 +52,23 @@ port 25353
 search_order 1
 timeout 5
 EOS
+sudo killall -HUP mDNSResponder # Flush DNS cache
 ```
 
 ### Linux
 
-TODO
+Alternatively, you can manually execute the followings:
+
+```
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudo chown -R $(whoami):$(id -g -n) /etc/systemd/resolved.conf.d
+cat<<EOS >/etc/systemd/resolved.conf.d/01-candy.conf
+[Resolve]
+DNS=127.0.0.1:25353
+Domains=test
+EOS
+sudo systemctl restart systemd-resolved # Restart resolved
+```
 
 ## Usage
 
