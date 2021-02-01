@@ -60,8 +60,8 @@ sudo killall -HUP mDNSResponder # Flush DNS cache
 go get -u github.com/owenthereal/candy/cmd/candy
 ```
 
-After installing the `candy` binary, you also need to create a [network name resolution config](https://www.freedesktop.org/software/systemd/man/resolved.conf.html) in `/etc/systemd/resolved.conf.d/CONFIG`.
-Creating the `/etc/systemd/resolved.conf.d` directory and the config file require superuser privileges. You can execute with a one-liner:
+After installing the `candy` binary, you also need to create a [network name resolution config](https://www.freedesktop.org/software/systemd/man/resolved.conf.html) in `/usr/lib/systemd/resolved.conf.d/CONFIG`.
+Creating the `/usr/lib/systemd/resolved.conf.d` directory and the config file require superuser privileges. You can execute with a one-liner:
 
 ```
 sudo candy setup
@@ -70,8 +70,8 @@ sudo candy setup
 Alternatively, you can manually execute the followings:
 
 ```
-sudo mkdir -p /etc/systemd/resolved.conf.d
-cat<<EOF | sudo tee /etc/systemd/resolved.conf.d/01-candy.conf > /dev/null
+sudo mkdir -p /usr/lib/systemd/resolved.conf.d
+cat<<EOF | sudo tee /usr/lib/systemd/resolved.conf.d/01-candy.conf > /dev/null
 [Resolve]
 DNS=127.0.0.1:25353
 Domains=test

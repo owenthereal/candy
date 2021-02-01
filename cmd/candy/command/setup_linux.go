@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	resolvedDir  = "/etc/systemd/resolved.conf.d"
+	resolvedDir  = "/usr/lib/systemd/resolved.conf.d"
 	resolvedFile = "01-candy.conf"
 	resolvedTmpl = `[Resolve]
 DNS=%s
