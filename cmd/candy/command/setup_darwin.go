@@ -25,21 +25,19 @@ timeout 5`
 )
 
 var (
-	flagSetupCmdDomains  []string
-	flagSetupCmdDNSAddr  string
-	flagSetupCmdHostRoot string
+	flagSetupCmdDomains []string
+	flagSetupCmdDNSAddr string
 )
 
-func Setup() *cobra.Command {
+func newSetupCmd() *cobra.Command {
 	setupCmd := &cobra.Command{
 		Use:   "setup",
-		Short: "Run system setup",
+		Short: "Run system setup for Mac",
 		RunE:  setupRunE,
 	}
 
-	setupCmd.Flags().StringSliceVar(&flagSetupCmdDomains, "domain", []string{"test"}, "The top-level domains for which Candy will respond to DNS queries")
-	setupCmd.Flags().StringVar(&flagSetupCmdDNSAddr, "dns-addr", "127.0.0.1:25353", "The DNS server address")
-	setupCmd.Flags().StringVar(&flagSetupCmdHostRoot, "host-root", filepath.Join(homeDir, ".candy"), "Path to the directory containing applications that will be served by Candy")
+	setupCmd.Flags().StringSliceVar(&flagSetupCmdDomains, "domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
+	setupCmd.Flags().StringVar(&flagSetupCmdDNSAddr, "dns-addr", defaultDNSAddr, "The DNS server address")
 
 	return setupCmd
 }
@@ -103,16 +101,6 @@ func setupRunE(c *cobra.Command, args []string) error {
 			if err := os.Chown(rf, uid, gid); err != nil {
 				return err
 			}
-		}
-	}
-
-	if err := os.MkdirAll(flagSetupCmdHostRoot, 0o0755); err != nil {
-		return fmt.Errorf("failed to create host directory: %w", err)
-	}
-
-	if shouldChown {
-		if err := os.Chown(flagSetupCmdHostRoot, uid, gid); err != nil {
-			return err
 		}
 	}
 

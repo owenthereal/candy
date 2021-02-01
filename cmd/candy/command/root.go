@@ -2,6 +2,7 @@ package command
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/owenthereal/candy"
@@ -16,9 +17,9 @@ var (
 
 func init() {
 	var err error
-	homeDir, err = os.UserHomeDir()
+	homeDir, err = userHomeDir()
 	if err != nil {
-		candy.Log().Fatal("error getting home directory", zap.Error(err))
+		candy.Log().Fatal("error getting user home directory", zap.Error(err))
 	}
 }
 
@@ -39,4 +40,27 @@ func Root() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(homeDir, ".candyconfig"), "Config file")
 
 	return rootCmd
+}
+
+func userHomeDir() (string, error) {
+	var (
+		sudo = os.Getenv("SUDO_USER")
+		euid = os.Geteuid()
+	)
+
+	if sudo != "" && euid == 0 {
+		u, err := user.Lookup(sudo)
+		if err != nil {
+			return "", nil
+		}
+
+		return u.HomeDir, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return homeDir, nil
 }
