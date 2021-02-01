@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -85,4 +86,13 @@ func setupRunE(c *cobra.Command, args []string) error {
 
 	logger.Info("restarting systemd-resolved")
 	return execCmd("systemctl", "restart", "systemd-resolved")
+}
+
+func execCmd(c ...string) error {
+	cmd := exec.Command(c[0], c[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }
