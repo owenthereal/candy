@@ -32,7 +32,7 @@ func init() {
 }
 
 func addServerFlags(cmd *cobra.Command) {
-	cmd.Flags().String("host-root", filepath.Join(homeDir, ".candy"), "Path to the directory containing applications that will be served by Candy")
+	cmd.Flags().String("host-root", filepath.Join(userHomeDir(), ".candy"), "Path to the directory containing applications that will be served by Candy")
 	cmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
 	cmd.Flags().String("http-addr", ":28080", "The Proxy server HTTP address")
 	cmd.Flags().String("https-addr", ":28443", "The Proxy server HTTPS address")
@@ -42,10 +42,10 @@ func addServerFlags(cmd *cobra.Command) {
 }
 
 func runRunE(c *cobra.Command, args []string) error {
-	return startServer(c)
+	return startServer(c, context.Background())
 }
 
-func startServer(c *cobra.Command) error {
+func startServer(c *cobra.Command, ctx context.Context) error {
 	var cfg server.Config
 	if err := candy.LoadConfig(
 		flagRootCfgFile,
@@ -66,10 +66,10 @@ func startServer(c *cobra.Command) error {
 	candy.Log().Info("using config", zap.Any("cfg", cfg))
 
 	if err := os.MkdirAll(cfg.HostRoot, 0o0755); err != nil {
-		return fmt.Errorf("failed to create host directory: %w", err)
+		return fmt.Errorf("failed to create host directory %s: %w", cfg.HostRoot, err)
 	}
 
 	svr := server.New(cfg)
 
-	return svr.Run(context.Background())
+	return svr.Run(ctx)
 }

@@ -25,34 +25,33 @@ var (
 )
 
 func init() {
-	var err error
-	homeDir, err = userHomeDir()
-	if err != nil {
-		candy.Log().Fatal("error getting user home directory", zap.Error(err))
-	}
-
-	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(homeDir, ".candyconfig"), "Config file")
+	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(userHomeDir(), ".candyconfig"), "Config file")
 }
 
-func userHomeDir() (string, error) {
+func userHomeDir() string {
+	if homeDir != "" {
+		return homeDir
+	}
+
 	var (
 		sudo = os.Getenv("SUDO_USER")
 		euid = os.Geteuid()
+		err  error
 	)
 
 	if sudo != "" && euid == 0 {
 		u, err := user.Lookup(sudo)
 		if err != nil {
-			return "", nil
+			candy.Log().Fatal("error looking up sudo user", zap.String("user", sudo), zap.Error(err))
 		}
 
-		return u.HomeDir, nil
+		return u.HomeDir
 	}
 
-	homeDir, err := os.UserHomeDir()
+	homeDir, err = os.UserHomeDir()
 	if err != nil {
-		return "", err
+		candy.Log().Fatal("error getting user home directory", zap.Error(err))
 	}
 
-	return homeDir, nil
+	return homeDir
 }
