@@ -1,4 +1,4 @@
-package command
+package cmd
 
 import (
 	"os"
@@ -9,6 +9,15 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
+
+func Execute() error {
+	return rootCmd.Execute()
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "candy",
+	Short: "A zero-config reverse proxy server",
+}
 
 var (
 	homeDir         string
@@ -21,25 +30,8 @@ func init() {
 	if err != nil {
 		candy.Log().Fatal("error getting user home directory", zap.Error(err))
 	}
-}
-
-func Root() *cobra.Command {
-	rootCmd := &cobra.Command{
-		Use:   "candy",
-		Short: "A zero-config reverse proxy server",
-	}
-
-	rootCmd.AddCommand(Run())
-	if launch := Launch(); launch != nil {
-		rootCmd.AddCommand(launch)
-	}
-	if setup := Setup(); setup != nil {
-		rootCmd.AddCommand(setup)
-	}
 
 	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(homeDir, ".candyconfig"), "Config file")
-
-	return rootCmd
 }
 
 func userHomeDir() (string, error) {

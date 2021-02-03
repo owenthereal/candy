@@ -1,4 +1,4 @@
-package command
+package cmd
 
 import (
 	"context"
@@ -20,16 +20,15 @@ var (
 	defaultDomains = []string{"test"}
 )
 
-func Run() *cobra.Command {
-	runCmd := &cobra.Command{
-		Use:   "run",
-		Short: "Starts the Candy process and blocks indefinitely",
-		RunE:  runRunE,
-	}
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Starts the Candy process and blocks indefinitely",
+	RunE:  runRunE,
+}
 
+func init() {
+	rootCmd.AddCommand(runCmd)
 	addServerFlags(runCmd)
-
-	return runCmd
 }
 
 func addServerFlags(cmd *cobra.Command) {
