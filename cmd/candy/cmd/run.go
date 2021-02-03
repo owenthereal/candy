@@ -42,10 +42,10 @@ func addServerFlags(cmd *cobra.Command) {
 }
 
 func runRunE(c *cobra.Command, args []string) error {
-	return startServer(c)
+	return startServer(c, context.Background())
 }
 
-func startServer(c *cobra.Command) error {
+func startServer(c *cobra.Command, ctx context.Context) error {
 	var cfg server.Config
 	if err := candy.LoadConfig(
 		flagRootCfgFile,
@@ -71,5 +71,5 @@ func startServer(c *cobra.Command) error {
 
 	svr := server.New(cfg)
 
-	return svr.Run(context.Background())
+	return svr.Run(ctx)
 }

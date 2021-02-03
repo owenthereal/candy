@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,6 +50,7 @@ func launchRunE(c *cobra.Command, args []string) error {
 		}
 
 		for _, proxy := range proxies {
+			proxy := proxy
 			g.Add(func() error {
 				return proxy.Run()
 			}, func(err error) {
@@ -58,9 +60,11 @@ func launchRunE(c *cobra.Command, args []string) error {
 	}
 
 	{
+		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
-			return startServer(c)
+			return startServer(c, ctx)
 		}, func(err error) {
+			cancel()
 		})
 	}
 
