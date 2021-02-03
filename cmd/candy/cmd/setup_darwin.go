@@ -1,6 +1,6 @@
 // +build darwin
 
-package command
+package cmd
 
 import (
 	"errors"
@@ -29,17 +29,16 @@ var (
 	flagSetupCmdDNSAddr string
 )
 
-func newSetupCmd() *cobra.Command {
-	setupCmd := &cobra.Command{
-		Use:   "setup",
-		Short: "Run system setup for Mac",
-		RunE:  setupRunE,
-	}
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Run system setup for Mac",
+	RunE:  setupRunE,
+}
 
+func init() {
+	rootCmd.AddCommand(setupCmd)
 	setupCmd.Flags().StringSliceVar(&flagSetupCmdDomains, "domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
 	setupCmd.Flags().StringVar(&flagSetupCmdDNSAddr, "dns-addr", defaultDNSAddr, "The DNS server address")
-
-	return setupCmd
 }
 
 func setupRunE(c *cobra.Command, args []string) error {

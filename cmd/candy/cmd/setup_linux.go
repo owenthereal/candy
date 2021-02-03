@@ -1,6 +1,6 @@
 // +build linux
 
-package command
+package cmd
 
 import (
 	"errors"
@@ -25,29 +25,30 @@ DNS=%s
 Domains=%s`
 )
 
-func newSetupCmd() *cobra.Command {
-	setupCmd := &cobra.Command{
-		Use:   "setup",
-		Short: "Run system setup for Linux",
-		RunE: func(c *cobra.Command, args []string) error {
-			err := setupRunE(c, args)
-			if err != nil {
-				if errors.Is(err, os.ErrPermission) {
-					candy.Log().Error(fmt.Sprintf("requiring superuser privileges, rerun with `sudo %s`", strings.Join(os.Args, " ")))
-				}
-			}
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Run system setup for Linux",
+	RunE:  setupRunE,
+}
 
-			return err
-		},
-	}
-
+func init() {
+	rootCmd.AddCommand(setupCmd)
 	setupCmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
 	setupCmd.Flags().String("dns-addr", defaultDNSAddr, "The DNS server address")
-
-	return setupCmd
 }
 
 func setupRunE(c *cobra.Command, args []string) error {
+	err := runSetupRunE(c, args)
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) {
+			candy.Log().Error(fmt.Sprintf("requiring superuser privileges, rerun with `sudo %s`", strings.Join(os.Args, " ")))
+		}
+	}
+
+	return err
+}
+
+func runSetupRunE(c *cobra.Command, args []string) error {
 	var cfg server.Config
 	if err := candy.LoadConfig(
 		flagRootCfgFile,
@@ -86,6 +87,7 @@ func setupRunE(c *cobra.Command, args []string) error {
 
 	logger.Info("restarting systemd-resolved")
 	return execCmd("systemctl", "restart", "systemd-resolved")
+
 }
 
 func execCmd(c ...string) error {

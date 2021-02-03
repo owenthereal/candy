@@ -1,6 +1,6 @@
 // +build darwin
 
-package command
+package cmd
 
 import (
 	"fmt"
@@ -12,16 +12,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Launch() *cobra.Command {
-	launchCmd := &cobra.Command{
-		Use:   "launch",
-		Short: "Starts the Candy process and runs as a launchd daemon (Mac OS)",
-		RunE:  launchRunE,
-	}
+var launchCmd = &cobra.Command{
+	Use:   "launch",
+	Short: "Starts the Candy process and runs as a launchd daemon (Mac OS)",
+	RunE:  launchRunE,
+}
 
+func init() {
+	rootCmd.AddCommand(launchCmd)
 	addServerFlags(launchCmd)
-
-	return launchCmd
 }
 
 func launchRunE(c *cobra.Command, args []string) error {
