@@ -9,24 +9,21 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 
 	"github.com/owenthereal/candy"
+	"github.com/owenthereal/candy/server"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
 const (
+	resolverDir  = "/etc/resolver"
 	resolverTmpl = `domain %s
 nameserver %s
 port %s
 search_order 1
 timeout 5`
-)
-
-var (
-	flagSetupCmdDomains []string
-	flagSetupCmdDNSAddr string
 )
 
 var setupCmd = &cobra.Command{
@@ -37,69 +34,61 @@ var setupCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(setupCmd)
-	setupCmd.Flags().StringSliceVar(&flagSetupCmdDomains, "domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
-	setupCmd.Flags().StringVar(&flagSetupCmdDNSAddr, "dns-addr", defaultDNSAddr, "The DNS server address")
+	setupCmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
+	setupCmd.Flags().String("dns-addr", defaultDNSAddr, "The DNS server address")
 }
 
 func setupRunE(c *cobra.Command, args []string) error {
-	host, port, err := net.SplitHostPort(flagSetupCmdDNSAddr)
+	err := runSetupRunE(c, args)
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) {
+			candy.Log().Error(fmt.Sprintf("requiring superuser privileges, rerun with `sudo %s`", strings.Join(os.Args, " ")))
+		}
+	}
+
+	return err
+}
+
+func runSetupRunE(c *cobra.Command, args []string) error {
+	var cfg server.Config
+	if err := candy.LoadConfig(
+		flagRootCfgFile,
+		c,
+		[]string{
+			"domain",
+			"dns-addr",
+		},
+		&cfg,
+	); err != nil {
+		return err
+	}
+
+	host, port, err := net.SplitHostPort(cfg.DnsAddr)
 	if err != nil {
 		return err
 	}
 
-	logger := candy.Log()
-
-	const rd = "/etc/resolver"
-	if err := os.MkdirAll(rd, 0o755); err != nil {
-		if errors.Is(err, os.ErrPermission) {
-			logger.Error("requiring superuser privileges to create directory", zap.String("dir", rd))
-		}
-
+	if err := os.MkdirAll(resolverDir, 0o755); err != nil {
 		return err
 	}
 
-	var (
-		sudo        = os.Getenv("SUDO_USER")
-		uid         int
-		gid         int
-		shouldChown bool
-	)
+	var logger = candy.Log()
 
-	if sudo != "" {
-		var err1, err2 error
+	for _, domain := range cfg.Domain {
+		file := filepath.Join(resolverDir, "candy-"+domain)
+		content := fmt.Sprintf(resolverTmpl, domain, host, port)
 
-		uid, err1 = strconv.Atoi(os.Getenv("SUDO_UID"))
-		gid, err2 = strconv.Atoi(os.Getenv("SUDO_GID"))
-
-		shouldChown = err1 == nil && err2 == nil
-	}
-
-	if shouldChown {
-		if err := os.Chown(rd, uid, gid); err != nil {
-			return err
-		}
-	}
-
-	for _, domain := range flagSetupCmdDomains {
-		rf := filepath.Join(rd, "candy-"+domain)
-		if _, err := os.Stat(rf); err == nil {
-			continue
-		}
-
-		logger.Info("Writing DNS resolver config", zap.String("file", rf))
-
-		if err := ioutil.WriteFile(
-			rf,
-			[]byte(fmt.Sprintf(resolverTmpl, domain, host, port)),
-			0o644,
-		); err != nil {
-			return err
-		}
-
-		if shouldChown {
-			if err := os.Chown(rf, uid, gid); err != nil {
-				return err
+		b, err := ioutil.ReadFile(file)
+		if err == nil {
+			if string(b) == content {
+				logger.Info("resolver configuration file unchanged", zap.String("file", file))
+				continue
 			}
+		}
+
+		logger.Info("writing resolver configuration file", zap.String("file", file))
+		if err := ioutil.WriteFile(file, []byte(content), 0o644); err != nil {
+			return err
 		}
 	}
 

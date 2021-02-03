@@ -51,7 +51,6 @@ port 25353
 search_order 1
 timeout 5
 EOF
-sudo killall -HUP mDNSResponder # Flush DNS cache
 ```
 
 ### Linux
@@ -141,13 +140,9 @@ For example, you may want to have multiple top-leveled domains besides `*.test`:
 ```
 
 Changing the `domain` setting requires resetting DNS resolvers in `/etc/resolver`.
-Rerun the [setup step](#setup) with all the matching domains:
+Rerun the [setup step](#setup) and make sure all resolver config files are matching in `/etc/resolver`.
 
-```
-sudo candy setup --domain test --domain mydomain
-```
-
-After changing a setting in `~/.candyconfig`, you will need to [restart](#starting-candy) Candy for the change to take effect:
+After changing a setting in `~/.candyconfig`, you will also need to [restart](#starting-candy) Candy for the change to take effect:
 
 ## Prior Arts
 
