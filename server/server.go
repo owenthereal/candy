@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/owenthereal/candy"
 	"github.com/owenthereal/candy/caddy"
@@ -19,6 +20,34 @@ type Config struct {
 	AdminAddr  string   `mapstructure:"admin-addr"`
 	DnsAddr    string   `mapstructure:"dns-addr"`
 	DnsLocalIp bool     `mapstructure:"dns-local-ip"`
+}
+
+func (c Config) Validate() error {
+	if c.HostRoot == "" {
+		return fmt.Errorf("--host-root is required")
+	}
+
+	if len(c.Domain) == 0 {
+		return fmt.Errorf("--domain is required")
+	}
+
+	if c.HttpAddr == "" {
+		return fmt.Errorf("--http-addr is required")
+	}
+
+	if c.HttpsAddr == "" {
+		return fmt.Errorf("--https-addr is required")
+	}
+
+	if c.AdminAddr == "" {
+		return fmt.Errorf("--admin-addr is required")
+	}
+
+	if c.DnsAddr == "" {
+		return fmt.Errorf("--dns-addr is required")
+	}
+
+	return nil
 }
 
 func New(cfg Config) *Server {

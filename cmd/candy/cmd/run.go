@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/owenthereal/candy"
 	"github.com/owenthereal/candy/server"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -46,20 +49,8 @@ func runRunE(c *cobra.Command, args []string) error {
 }
 
 func startServer(c *cobra.Command, ctx context.Context) error {
-	var cfg server.Config
-	if err := candy.LoadConfig(
-		flagRootCfgFile,
-		c,
-		[]string{
-			"host-root",
-			"domain",
-			"http-addr",
-			"https-addr",
-			"admin-addr",
-			"dns-addr",
-		},
-		&cfg,
-	); err != nil {
+	cfg, err := loadServerConfig(c)
+	if err != nil {
 		return err
 	}
 
@@ -69,7 +60,51 @@ func startServer(c *cobra.Command, ctx context.Context) error {
 		return fmt.Errorf("failed to create host directory %s: %w", cfg.HostRoot, err)
 	}
 
-	svr := server.New(cfg)
+	svr := server.New(*cfg)
 
 	return svr.Run(ctx)
+}
+
+func loadServerConfig(cmd *cobra.Command) (*server.Config, error) {
+	var cfg server.Config
+
+	if err := unmarshalFlags(flagConfigFile, cmd, &cfg); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+func unmarshalFlags(cfgFile string, cmd *cobra.Command, opts interface{}) error {
+	v := viper.New()
+
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		flagName := flag.Name
+		if flagName != "config" && flagName != "help" {
+			if err := v.BindPFlag(flagName, flag); err != nil {
+				panic(fmt.Errorf("error binding flag '%s': %w", flagName, err).Error())
+			}
+		}
+	})
+
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	v.SetEnvPrefix("CANDY")
+
+	if _, err := os.Stat(cfgFile); err == nil {
+		v.SetConfigFile(cfgFile)
+		v.SetConfigType("json")
+	}
+
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return fmt.Errorf("error loading config file %s: %w", cfgFile, err)
+		}
+	}
+
+	return v.Unmarshal(opts)
 }

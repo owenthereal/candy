@@ -20,12 +20,12 @@ var rootCmd = &cobra.Command{
 }
 
 var (
-	homeDir         string
-	flagRootCfgFile string
+	homeDir        string
+	flagConfigFile string
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&flagRootCfgFile, "config", filepath.Join(userHomeDir(), ".candyconfig"), "Config file")
+	rootCmd.PersistentFlags().StringVar(&flagConfigFile, "config", filepath.Join(userHomeDir(), ".candyconfig"), "Config file")
 }
 
 func userHomeDir() string {
