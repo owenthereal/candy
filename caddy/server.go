@@ -36,31 +36,27 @@ type Config struct {
 }
 
 func New(cfg Config) candy.ProxyServer {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	return &caddyServer{
 		cfg: cfg,
 		apps: candy.NewAppService(candy.AppServiceConfig{
 			TLDs:     cfg.TLDs,
 			HostRoot: cfg.HostRoot,
 		}),
-		ctx:    ctx,
-		cancel: cancel,
 	}
 }
 
 type caddyServer struct {
+	ctx  context.Context
 	cfg  Config
 	apps *candy.AppService
 
 	caddyCfg      *caddy.Config
 	caddyCfgMutex sync.Mutex
-
-	ctx    context.Context
-	cancel context.CancelFunc
 }
 
 func (c *caddyServer) Run(ctx context.Context) error {
+	c.ctx = ctx
+
 	if err := c.startServer(); err != nil {
 		return err
 	}
