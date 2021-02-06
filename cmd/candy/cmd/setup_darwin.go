@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/owenthereal/candy"
-	"github.com/owenthereal/candy/server"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -50,16 +49,8 @@ func setupRunE(c *cobra.Command, args []string) error {
 }
 
 func runSetupRunE(c *cobra.Command, args []string) error {
-	var cfg server.Config
-	if err := candy.LoadConfig(
-		flagRootCfgFile,
-		c,
-		[]string{
-			"domain",
-			"dns-addr",
-		},
-		&cfg,
-	); err != nil {
+	cfg, err := loadServerConfig(c)
+	if err != nil {
 		return err
 	}
 
@@ -72,7 +63,7 @@ func runSetupRunE(c *cobra.Command, args []string) error {
 		return err
 	}
 
-	var logger = candy.Log()
+	logger := candy.Log()
 
 	for _, domain := range cfg.Domain {
 		file := filepath.Join(resolverDir, "candy-"+domain)
