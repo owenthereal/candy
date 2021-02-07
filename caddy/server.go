@@ -144,7 +144,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	httpsServer := &caddyhttp.Server{
 		Routes: caddyRoutes(
 			reverseproxy.HTTPTransport{
-				Versions: []string{"1.1", "2"},
+				Versions: []string{"1.1", "2", "h2c"},
 			},
 			apps,
 		),
