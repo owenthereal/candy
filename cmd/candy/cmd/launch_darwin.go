@@ -21,7 +21,7 @@ var launchCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(launchCmd)
-	addServerFlags(launchCmd)
+	addDefaultFlags(launchCmd)
 }
 
 func launchRunE(c *cobra.Command, args []string) error {
