@@ -31,10 +31,10 @@ var runCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	addServerFlags(runCmd)
+	addDefaultFlags(runCmd)
 }
 
-func addServerFlags(cmd *cobra.Command) {
+func addDefaultFlags(cmd *cobra.Command) {
 	cmd.Flags().String("host-root", filepath.Join(userHomeDir(), ".candy"), "Path to the directory containing applications that will be served by Candy")
 	cmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
 	cmd.Flags().String("http-addr", ":28080", "The Proxy server HTTP address")

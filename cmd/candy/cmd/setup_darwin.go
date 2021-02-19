@@ -33,8 +33,7 @@ var setupCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(setupCmd)
-	setupCmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
-	setupCmd.Flags().String("dns-addr", defaultDNSAddr, "The DNS server address")
+	addDefaultFlags(setupCmd)
 }
 
 func setupRunE(c *cobra.Command, args []string) error {
