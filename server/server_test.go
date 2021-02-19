@@ -19,10 +19,10 @@ import (
 func Test_Server(t *testing.T) {
 	var (
 		hostRoot  = t.TempDir()
-		httpAddr  = "127.0.0.1:" + randomPort(t)
-		httpsAddr = "127.0.0.1:" + randomPort(t)
-		adminAddr = "127.0.0.1:" + randomPort(t)
-		dnsAddr   = "127.0.0.1:" + randomPort(t)
+		httpAddr  = randomAddr(t)
+		httpsAddr = randomAddr(t)
+		adminAddr = randomAddr(t)
+		dnsAddr   = randomAddr(t)
 		tlds      = []string{"go-test"}
 	)
 
@@ -188,12 +188,8 @@ func Test_Server(t *testing.T) {
 
 func Test_Server_Shutdown(t *testing.T) {
 	var (
-		hostRoot  = t.TempDir()
-		httpAddr  = "127.0.0.1:" + randomPort(t)
-		httpsAddr = "127.0.0.1:" + randomPort(t)
-		adminAddr = "127.0.0.1:" + randomPort(t)
-		dnsAddr   = "127.0.0.1:" + randomPort(t)
-		tlds      = []string{"go-test"}
+		hostRoot = t.TempDir()
+		tlds     = []string{"go-test"}
 	)
 
 	cases := []struct {
@@ -206,9 +202,9 @@ func Test_Server_Shutdown(t *testing.T) {
 			Config: Config{
 				HostRoot:  hostRoot,
 				Domain:    tlds,
-				HttpAddr:  httpAddr,
-				HttpsAddr: httpsAddr,
-				AdminAddr: adminAddr,
+				HttpAddr:  randomAddr(t),
+				HttpsAddr: randomAddr(t),
+				AdminAddr: randomAddr(t),
 				DnsAddr:   "invalid-addr",
 			},
 			WantErrMsg: "address invalid-addr: missing port in address",
@@ -219,9 +215,9 @@ func Test_Server_Shutdown(t *testing.T) {
 				HostRoot:  hostRoot,
 				Domain:    tlds,
 				HttpAddr:  "invalid-addr",
-				HttpsAddr: httpsAddr,
-				AdminAddr: adminAddr,
-				DnsAddr:   dnsAddr,
+				HttpsAddr: randomAddr(t),
+				AdminAddr: "", // TODO: running into caddy race issue with `go test -race` when replacing admin server. Disabling admin server for this and report upstream.
+				DnsAddr:   randomAddr(t),
 			},
 			WantErrMsg: "address invalid-addr: missing port in address",
 		},
@@ -230,10 +226,10 @@ func Test_Server_Shutdown(t *testing.T) {
 			Config: Config{
 				HostRoot:  hostRoot,
 				Domain:    tlds,
-				HttpAddr:  httpAddr,
-				HttpsAddr: httpsAddr,
+				HttpAddr:  randomAddr(t),
+				HttpsAddr: randomAddr(t),
 				AdminAddr: "invalid-addr",
-				DnsAddr:   dnsAddr,
+				DnsAddr:   randomAddr(t),
 			},
 			WantErrMsg: "address invalid-addr: missing port in address",
 		},
@@ -242,10 +238,10 @@ func Test_Server_Shutdown(t *testing.T) {
 			Config: Config{
 				HostRoot:  "invalid-host-root",
 				Domain:    tlds,
-				HttpAddr:  httpAddr,
-				HttpsAddr: httpsAddr,
-				AdminAddr: adminAddr,
-				DnsAddr:   dnsAddr,
+				HttpAddr:  randomAddr(t),
+				HttpsAddr: randomAddr(t),
+				AdminAddr: randomAddr(t),
+				DnsAddr:   randomAddr(t),
 			},
 			WantErrMsg: "invalid-host-root: no such file or directory",
 		},
@@ -270,6 +266,10 @@ func Test_Server_Shutdown(t *testing.T) {
 			}
 		})
 	}
+}
+
+func randomAddr(t *testing.T) string {
+	return "127.0.0.1:" + randomPort(t)
 }
 
 func randomPort(t *testing.T) string {
