@@ -91,7 +91,7 @@ func (c *caddyServer) startServer() error {
 func (c *caddyServer) stopServer() error {
 	c.cfg.Logger.Info("shutting down Caddy server")
 
-	return c.apiRequest(context.Background(), http.MethodPost, "/stop", nil)
+	return c.apiRequest(c.ctx, http.MethodPost, "/stop", nil)
 }
 
 func (c *caddyServer) Reload() error {
@@ -181,13 +181,20 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		},
 	}
 
-	return &caddy.Config{
-		Admin: &caddy.AdminConfig{Listen: c.cfg.AdminAddr},
+	ccfg := &caddy.Config{
 		AppsRaw: caddy.ModuleMap{
 			"http": caddyconfig.JSON(httpApp, nil),
 			"tls":  caddyconfig.JSON(tls, nil),
 		},
 	}
+
+	if c.cfg.AdminAddr == "" {
+		ccfg.Admin = &caddy.AdminConfig{Disabled: true}
+	} else {
+		ccfg.Admin = &caddy.AdminConfig{Listen: c.cfg.AdminAddr}
+	}
+
+	return ccfg
 }
 
 func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, v interface{}) error {
