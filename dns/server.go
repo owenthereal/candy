@@ -38,6 +38,7 @@ func (d *dnsServer) Run(ctx context.Context) error {
 		mux.HandleFunc(tld+".", d.handleDNS)
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	var g run.Group
 	{
 		udp := &dns.Server{
@@ -64,7 +65,6 @@ func (d *dnsServer) Run(ctx context.Context) error {
 		})
 	}
 	{
-		ctx, cancel := context.WithCancel(ctx)
 		g.Add(func() error {
 			<-ctx.Done()
 			return ctx.Err()
