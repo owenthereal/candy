@@ -181,7 +181,7 @@ github.com/mitchellh/copystructure
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.0
 github.com/mitchellh/reflectwalk
-# github.com/oklog/run v1.0.0
+# github.com/oklog/run v1.1.1-0.20200508094559-c7096881717e
 ## explicit
 github.com/oklog/run
 # github.com/pelletier/go-toml v1.6.0

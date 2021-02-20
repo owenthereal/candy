@@ -6,7 +6,7 @@ install:
 
 .PHONY: build
 build:
-	go build -o build/candy -mod=vendor ./cmd/candy
+	go build -o build/candy ./cmd/candy
 
 .PHONY: vet
 vet:
@@ -14,4 +14,4 @@ vet:
 
 .PHONY: test
 test:
-	go test ./... -timeout=180s -coverprofile=c.out -covermode=atomic -mod=vendor -count=1 -race -v
+	go test ./... -timeout=180s -coverprofile=c.out -covermode=atomic -count=1 -race -v
