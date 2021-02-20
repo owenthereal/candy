@@ -33,13 +33,18 @@ func (d *dnsServer) Run(ctx context.Context) error {
 	d.cfg.Logger.Info("starting DNS server", zap.Any("cfg", d.cfg))
 	defer d.cfg.Logger.Info("shutting down DNS server")
 
+	mux := dns.NewServeMux()
 	for _, tld := range d.cfg.TLDs {
-		dns.HandleFunc(tld+".", d.handleDNS)
+		mux.HandleFunc(tld+".", d.handleDNS)
 	}
 
 	var g run.Group
 	{
-		udp := &dns.Server{Addr: d.cfg.Addr, Net: "udp"}
+		udp := &dns.Server{
+			Handler: mux,
+			Addr:    d.cfg.Addr,
+			Net:     "udp",
+		}
 		g.Add(func() error {
 			return udp.ListenAndServe()
 		}, func(err error) {
@@ -47,7 +52,11 @@ func (d *dnsServer) Run(ctx context.Context) error {
 		})
 	}
 	{
-		tcp := &dns.Server{Addr: d.cfg.Addr, Net: "tcp"}
+		tcp := &dns.Server{
+			Handler: mux,
+			Addr:    d.cfg.Addr,
+			Net:     "tcp",
+		}
 		g.Add(func() error {
 			return tcp.ListenAndServe()
 		}, func(err error) {
