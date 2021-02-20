@@ -259,7 +259,7 @@ func Test_Server_Shutdown(t *testing.T) {
 			}()
 
 			select {
-			case <-time.After(10 * time.Second):
+			case <-time.After(5 * time.Second):
 				t.Fatal("error wait time out")
 			case err := <-errch:
 				if want, got := c.WantErrMsg, err.Error(); !strings.Contains(got, want) {
