@@ -250,7 +250,7 @@ func Test_Server_Shutdown(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.Name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			errch := make(chan error)
 			srv := New(c.Config)
