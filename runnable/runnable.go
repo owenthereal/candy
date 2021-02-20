@@ -13,8 +13,8 @@ type Runable interface {
 func RunWithContext(ctx context.Context, runs []Runable) error {
 	var g run.Group
 
-	for i := range runs {
-		run := runs[i]
+	for _, run := range runs {
+		run := run
 
 		ctx, cancel := context.WithCancel(ctx)
 		g.Add(func() error {

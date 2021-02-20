@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	caddyAPITimeout = 5 * time.Second
+	caddyAPITimeout = 3 * time.Second
 )
 
 type Config struct {

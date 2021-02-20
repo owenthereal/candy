@@ -43,7 +43,7 @@ func (d *dnsServer) Run(ctx context.Context) error {
 		g.Add(func() error {
 			return udp.ListenAndServe()
 		}, func(err error) {
-			_ = udp.Shutdown()
+			_ = udp.ShutdownContext(ctx)
 		})
 	}
 	{
@@ -51,7 +51,7 @@ func (d *dnsServer) Run(ctx context.Context) error {
 		g.Add(func() error {
 			return tcp.ListenAndServe()
 		}, func(err error) {
-			_ = tcp.Shutdown()
+			_ = tcp.ShutdownContext(ctx)
 		})
 	}
 	{

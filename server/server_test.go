@@ -248,10 +248,12 @@ func Test_Server_Shutdown(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		cc := c
-		t.Run(cc.Name, func(t *testing.T) {
+		c := c
+		t.Run(c.Name, func(t *testing.T) {
+			t.Parallel()
+
 			errch := make(chan error)
-			srv := New(cc.Config)
+			srv := New(c.Config)
 			go func() {
 				errch <- srv.Run(context.Background())
 			}()
@@ -260,7 +262,7 @@ func Test_Server_Shutdown(t *testing.T) {
 			case <-time.After(5 * time.Second):
 				t.Fatal("error wait time out")
 			case err := <-errch:
-				if want, got := cc.WantErrMsg, err.Error(); !strings.Contains(got, want) {
+				if want, got := c.WantErrMsg, err.Error(); !strings.Contains(got, want) {
 					t.Fatalf("got error does not contain want string: want=%s, got=%s", want, got)
 				}
 			}
