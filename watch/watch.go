@@ -3,6 +3,7 @@ package watch
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
@@ -31,6 +32,10 @@ type watcher struct {
 func (f *watcher) Run(ctx context.Context) error {
 	f.cfg.Logger.Info("starting Watcher", zap.String("HostRoot", f.cfg.HostRoot))
 	defer f.cfg.Logger.Info("shutting down Watcher")
+
+	if _, err := os.Stat(f.cfg.HostRoot); err != nil {
+		return err
+	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
