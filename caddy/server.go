@@ -55,6 +55,9 @@ type caddyServer struct {
 }
 
 func (c *caddyServer) Run(ctx context.Context) error {
+	c.cfg.Logger.Info("starting Caddy server", zap.Any("cfg", c.cfg))
+	defer c.cfg.Logger.Info("shutting down Caddy server")
+
 	c.ctx = ctx
 
 	if err := c.startServer(); err != nil {
@@ -71,8 +74,6 @@ func (c *caddyServer) Run(ctx context.Context) error {
 }
 
 func (c *caddyServer) startServer() error {
-	c.cfg.Logger.Info("starting Caddy server", zap.Any("cfg", c.cfg))
-
 	c.caddyCfgMutex.Lock()
 	defer c.caddyCfgMutex.Unlock()
 
@@ -89,7 +90,7 @@ func (c *caddyServer) startServer() error {
 }
 
 func (c *caddyServer) stopServer() error {
-	c.cfg.Logger.Info("shutting down Caddy server")
+	c.cfg.Logger.Info("stopping Caddy server")
 
 	return c.apiRequest(c.ctx, http.MethodPost, "/stop", nil)
 }
