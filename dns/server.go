@@ -42,9 +42,10 @@ func (d *dnsServer) Run(ctx context.Context) error {
 	var g run.Group
 	{
 		udp := &dns.Server{
-			Handler: mux,
-			Addr:    d.cfg.Addr,
-			Net:     "udp",
+			Handler:   mux,
+			Addr:      d.cfg.Addr,
+			Net:       "udp",
+			ReusePort: true,
 		}
 		g.Add(func() error {
 			return udp.ListenAndServe()
@@ -54,9 +55,10 @@ func (d *dnsServer) Run(ctx context.Context) error {
 	}
 	{
 		tcp := &dns.Server{
-			Handler: mux,
-			Addr:    d.cfg.Addr,
-			Net:     "tcp",
+			Handler:   mux,
+			Addr:      d.cfg.Addr,
+			Net:       "tcp",
+			ReusePort: true,
 		}
 		g.Add(func() error {
 			return tcp.ListenAndServe()
