@@ -34,6 +34,13 @@ var setupCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(setupCmd)
 	addDefaultFlags(setupCmd)
+
+	// Hide flags that are not used by setup
+	setupCmd.Flags().MarkHidden("http-addr")
+	setupCmd.Flags().MarkHidden("https-addr")
+	setupCmd.Flags().MarkHidden("admin-addr")
+	setupCmd.Flags().MarkHidden("dns-addr")
+	setupCmd.Flags().MarkHidden("dns-local-ip")
 }
 
 func setupRunE(c *cobra.Command, args []string) error {
