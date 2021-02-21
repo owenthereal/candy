@@ -176,7 +176,7 @@ func Test_Server(t *testing.T) {
 		}
 
 		select {
-		case <-time.After(20 * time.Second):
+		case <-time.After(5 * time.Second):
 			t.Fatal("error wait time out")
 		case err := <-errch:
 			if want, got := fmt.Sprintf("host root %s was removed", hostRoot), err.Error(); want != got {
@@ -259,7 +259,7 @@ func Test_Server_Shutdown(t *testing.T) {
 			}()
 
 			select {
-			case <-time.After(5 * time.Second):
+			case <-time.After(10 * time.Second):
 				t.Fatal("error wait time out")
 			case err := <-errch:
 				if want, got := c.WantErrMsg, err.Error(); !strings.Contains(got, want) {
