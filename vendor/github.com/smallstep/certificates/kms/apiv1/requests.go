@@ -98,9 +98,16 @@ type GetPublicKeyRequest struct {
 
 // CreateKeyRequest is the parameter used in the kms.CreateKey method.
 type CreateKeyRequest struct {
-	Name               string
+	// Name represents the key name or label used to identify a key.
+	//
+	// Used by: awskms, cloudkms, pkcs11, yubikey.
+	Name string
+
+	// SignatureAlgorithm represents the type of key to create.
 	SignatureAlgorithm SignatureAlgorithm
-	Bits               int
+
+	// Bits is the number of bits on RSA keys.
+	Bits int
 
 	// ProtectionLevel specifies how cryptographic operations are performed.
 	// Used by: cloudkms
@@ -124,6 +131,14 @@ type CreateSignerRequest struct {
 	PublicKey     string
 	PublicKeyPEM  []byte
 	Password      []byte
+}
+
+// CreateDecrypterRequest is the parameter used in the kms.Decrypt method.
+type CreateDecrypterRequest struct {
+	Decrypter        crypto.Decrypter
+	DecryptionKey    string
+	DecryptionKeyPEM []byte
+	Password         []byte
 }
 
 // LoadCertificateRequest is the parameter used in the LoadCertificate method of

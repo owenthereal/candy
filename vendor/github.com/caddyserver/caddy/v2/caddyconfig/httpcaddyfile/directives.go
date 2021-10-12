@@ -44,9 +44,9 @@ var directiveOrder = []string{
 	"request_body",
 
 	"redir",
-	"rewrite",
 
 	// URI manipulation
+	"rewrite",
 	"uri",
 	"try_files",
 
@@ -54,15 +54,17 @@ var directiveOrder = []string{
 	"basicauth",
 	"request_header",
 	"encode",
+	"push",
 	"templates",
 
 	// special routing & dispatching directives
 	"handle",
 	"handle_path",
 	"route",
-	"push",
 
 	// handlers that typically respond to requests
+	"abort",
+	"error",
 	"respond",
 	"metrics",
 	"reverse_proxy",
@@ -263,6 +265,13 @@ func (h Helper) NewBindAddresses(addrs []string) []ConfigValue {
 	return []ConfigValue{{Class: "bind", Value: addrs}}
 }
 
+// WithDispenser returns a new instance based on d. All others Helper
+// fields are copied, so typically maps are shared with this new instance.
+func (h Helper) WithDispenser(d *caddyfile.Dispenser) Helper {
+	h.Dispenser = d
+	return h
+}
+
 // ParseSegmentAsSubroute parses the segment such that its subdirectives
 // are themselves treated as directives, from which a subroute is built
 // and returned.
@@ -320,7 +329,7 @@ func parseSegmentAsConfig(h Helper) ([]ConfigValue, error) {
 			dir := seg.Directive()
 			dirFunc, ok := registeredDirectives[dir]
 			if !ok {
-				return nil, h.Errf("unrecognized directive: %s", dir)
+				return nil, h.Errf("unrecognized directive: %s - are you sure your Caddyfile structure (nesting and braces) is correct?", dir)
 			}
 
 			subHelper := h
@@ -469,6 +478,27 @@ func (sb serverBlock) hostsFromKeys(loggerMode bool) []string {
 	return sblockHosts
 }
 
+func (sb serverBlock) hostsFromKeysNotHTTP(httpPort string) []string {
+	// ensure each entry in our list is unique
+	hostMap := make(map[string]struct{})
+	for _, addr := range sb.keys {
+		if addr.Host == "" {
+			continue
+		}
+		if addr.Scheme != "http" && addr.Port != httpPort {
+			hostMap[addr.Host] = struct{}{}
+		}
+	}
+
+	// convert map to slice
+	sblockHosts := make([]string, 0, len(hostMap))
+	for host := range hostMap {
+		sblockHosts = append(sblockHosts, host)
+	}
+
+	return sblockHosts
+}
+
 // hasHostCatchAllKey returns true if sb has a key that
 // omits a host portion, i.e. it "catches all" hosts.
 func (sb serverBlock) hasHostCatchAllKey() bool {
@@ -498,9 +528,10 @@ type (
 	UnmarshalHandlerFunc func(h Helper) (caddyhttp.MiddlewareHandler, error)
 
 	// UnmarshalGlobalFunc is a function which can unmarshal Caddyfile
-	// tokens into a global option config value using a Helper type.
-	// These are passed in a call to RegisterGlobalOption.
-	UnmarshalGlobalFunc func(d *caddyfile.Dispenser) (interface{}, error)
+	// tokens from a global option. It is passed the tokens to parse and
+	// existing value from the previous instance of this global option
+	// (if any). It returns the value to associate with this global option.
+	UnmarshalGlobalFunc func(d *caddyfile.Dispenser, existingVal interface{}) (interface{}, error)
 )
 
 var registeredDirectives = make(map[string]UnmarshalFunc)

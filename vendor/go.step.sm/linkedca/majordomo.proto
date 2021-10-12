@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package linkedca;
+
+option go_package = "go.step.sm/linkedca";
+
+import "admin.proto";
+import "provisioners.proto";
+
+// Majordomo is the public service used to sync configurations to CA's and post
+// certificates.
+service Majordomo {
+	// Login creates signs a given CSR and returns the certificate that will be
+	// used for authentication.
+	rpc Login(LoginRequest) returns (LoginResponse);
+
+	// GetConfiguration returns the full configuration of an authority.
+	rpc GetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
+
+	// CreateProvisioner adds a new provisioner to the majordomo authority and
+	// returns the proto representation.
+	rpc CreateProvisioner(CreateProvisionerRequest) returns (linkedca.Provisioner);
+	// UpdateProvisioners updates a previously created provisioner.
+	rpc UpdateProvisioner(UpdateProvisionerRequest) returns (linkedca.Provisioner);
+	// DeleteProvisioner deletes a previously created provisioner.
+	rpc DeleteProvisioner(DeleteProvisionerRequest) returns (linkedca.Provisioner);
+
+	// CreateAdmin adds a new admin user to the majordomo authority. Admin users
+	// can add or delete provisioners.
+	rpc CreateAdmin(CreateAdminRequest) returns (linkedca.Admin);
+	// UpdateAdmin updates a previously created admin.
+	rpc UpdateAdmin(UpdateAdminRequest) returns (linkedca.Admin);
+	// DeleteAdmin deletes a previously created admin user
+	rpc DeleteAdmin(DeleteAdminRequest) returns (linkedca.Admin);
+
+	// PostCertificate sends a signed X.509 certificate to majordomo.
+	rpc PostCertificate(CertificateRequest) returns (CertificateResponse);
+	// PostSSHCertificate sends a signed SSH certificate to majordomo.
+	rpc PostSSHCertificate(SSHCertificateRequest) returns (SSHCertificateResponse);
+	// RevokeCertificate marks an X.509 certificate as revoked.
+	rpc RevokeCertificate(TODO) returns (TODO);
+	// RevokeSSHCertificate marks an SSH certificate as revoked.
+	rpc RevokeSSHCertificate(TODO) returns (TODO);
+}
+
+message TODO {}
+
+message LoginRequest {
+	string authority_id = 1;
+	string username = 2;
+	string password = 3;
+	string pem_certificate_request = 4;
+}
+
+message LoginResponse {
+	string pem_certificate = 1;
+	string pem_certificate_chain = 2;
+}
+
+message ConfigurationRequest {
+	string authority_id = 1;
+}
+
+message ConfigurationResponse {
+	repeated linkedca.Provisioner provisioners = 1;
+	repeated linkedca.Admin admins = 2;
+}
+
+message CreateProvisionerRequest {
+	linkedca.Provisioner.Type type = 1;
+	string name = 2;
+	linkedca.ProvisionerDetails details = 3;
+	linkedca.Claims claims = 4;
+	linkedca.Template x509_template = 5;
+	linkedca.Template ssh_template = 6;
+}
+
+message UpdateProvisionerRequest {
+	string id = 1;
+	string name = 2;
+	linkedca.ProvisionerDetails details = 3;
+	linkedca.Claims claims = 4;
+	linkedca.Template x509_template = 5;
+	linkedca.Template ssh_template = 6;
+}
+
+message DeleteProvisionerRequest {
+	string id = 1;
+}
+
+message CreateAdminRequest {
+	string subject = 1;
+	string provisioner_id = 2;
+	linkedca.Admin.Type type = 3;
+}
+
+message UpdateAdminRequest {
+	string id = 1;
+	linkedca.Admin.Type type = 2;
+}
+
+message DeleteAdminRequest {
+	string id = 1;
+}
+message CertificateRequest {
+	string pem_certificate = 1;
+	string pem_certificate_chain = 2;
+}
+
+message CertificateResponse {
+	string id = 1;
+}
+
+message SSHCertificateRequest {
+	string certificate = 1;
+}
+
+message SSHCertificateResponse {
+	string id = 1;
+}

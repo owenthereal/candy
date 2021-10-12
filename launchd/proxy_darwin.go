@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/inetaf/tcpproxy"
+	"inet.af/tcpproxy"
 )
 
 type SocketProxyConfig struct {

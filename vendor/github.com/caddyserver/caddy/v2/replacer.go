@@ -36,6 +36,18 @@ func NewReplacer() *Replacer {
 	return rep
 }
 
+// NewEmptyReplacer returns a new Replacer,
+// without the global default replacements.
+func NewEmptyReplacer() *Replacer {
+	rep := &Replacer{
+		static: make(map[string]interface{}),
+	}
+	rep.providers = []ReplacerFunc{
+		rep.fromStatic,
+	}
+	return rep
+}
+
 // Replacer can replace values in strings.
 // A default/empty Replacer is not valid;
 // use NewReplacer to make one.
@@ -289,6 +301,10 @@ func globalDefaultReplacements(key string) (interface{}, bool) {
 		return nowFunc().Format("02/Jan/2006:15:04:05 -0700"), true
 	case "time.now.year":
 		return strconv.Itoa(nowFunc().Year()), true
+	case "time.now.unix":
+		return strconv.FormatInt(nowFunc().Unix(), 10), true
+	case "time.now.unix_ms":
+		return strconv.FormatInt(nowFunc().UnixNano()/int64(time.Millisecond), 10), true
 	}
 
 	return nil, false

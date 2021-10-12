@@ -116,7 +116,7 @@ type Server struct {
 
 	// Enables H2C ("Cleartext HTTP/2" or "H2 over TCP") support,
 	// which will serve HTTP/2 over plaintext TCP connections if
-	// a client support it. Because this is not implemented by the
+	// the client supports it. Because this is not implemented by the
 	// Go standard library, using H2C is incompatible with most
 	// of the other options for this server. Do not enable this
 	// only to achieve maximum client compatibility. In practice,
@@ -184,8 +184,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				log = logger.Error
 			}
 
+			userID, _ := repl.GetString("http.auth.user.id")
+
 			log("handled request",
 				zap.String("common_log", repl.ReplaceAll(commonLogFormat, commonLogEmptyValue)),
+				zap.String("user_id", userID),
 				zap.Duration("duration", duration),
 				zap.Int("size", wrec.Size()),
 				zap.Int("status", wrec.Status()),
@@ -371,6 +374,48 @@ func (s *Server) hasTLSClientAuth() bool {
 		}
 	}
 	return false
+}
+
+// findLastRouteWithHostMatcher returns the index of the last route
+// in the server which has a host matcher. Used during Automatic HTTPS
+// to determine where to insert the HTTP->HTTPS redirect route, such
+// that it is after any other host matcher but before any "catch-all"
+// route without a host matcher.
+func (s *Server) findLastRouteWithHostMatcher() int {
+	foundHostMatcher := false
+	lastIndex := len(s.Routes)
+
+	for i, route := range s.Routes {
+		// since we want to break out of an inner loop, use a closure
+		// to allow us to use 'return' when we found a host matcher
+		found := (func() bool {
+			for _, sets := range route.MatcherSets {
+				for _, matcher := range sets {
+					switch matcher.(type) {
+					case *MatchHost:
+						foundHostMatcher = true
+						return true
+					}
+				}
+			}
+			return false
+		})()
+
+		// if we found the host matcher, change the lastIndex to
+		// just after the current route
+		if found {
+			lastIndex = i + 1
+		}
+	}
+
+	// If we didn't actually find a host matcher, return 0
+	// because that means every defined route was a "catch-all".
+	// See https://caddy.community/t/how-to-set-priority-in-caddyfile/13002/8
+	if !foundHostMatcher {
+		return 0
+	}
+
+	return lastIndex
 }
 
 // HTTPErrorConfig determines how to handle errors
