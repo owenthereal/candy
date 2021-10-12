@@ -467,6 +467,7 @@ func Serialize(in interface{}, opts ...Options) (*pem.Block, error) {
 			}
 		} else {
 			var err error
+			// nolint:staticcheck
 			p, err = x509.EncryptPEMBlock(rand.Reader, p.Type, p.Bytes, ctx.password, DefaultEncCipher)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to serialize to PEM")

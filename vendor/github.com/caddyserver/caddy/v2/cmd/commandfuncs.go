@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,7 +28,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sort"
@@ -44,6 +44,7 @@ func cmdStart(fl Flags) (int, error) {
 	startCmdConfigAdapterFlag := fl.String("adapter")
 	startCmdPidfileFlag := fl.String("pidfile")
 	startCmdWatchFlag := fl.Bool("watch")
+	startCmdEnvfileFlag := fl.String("envfile")
 
 	// open a listener to which the child process will connect when
 	// it is ready to confirm that it has successfully started
@@ -66,6 +67,9 @@ func cmdStart(fl Flags) (int, error) {
 	cmd := exec.Command(os.Args[0], "run", "--pingback", ln.Addr().String())
 	if startCmdConfigFlag != "" {
 		cmd.Args = append(cmd.Args, "--config", startCmdConfigFlag)
+	}
+	if startCmdEnvfileFlag != "" {
+		cmd.Args = append(cmd.Args, "--envfile", startCmdEnvfileFlag)
 	}
 	if startCmdConfigAdapterFlag != "" {
 		cmd.Args = append(cmd.Args, "--adapter", startCmdConfigAdapterFlag)
@@ -116,7 +120,7 @@ func cmdStart(fl Flags) (int, error) {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				if !strings.Contains(err.Error(), "use of closed network connection") {
+				if !errors.Is(err, net.ErrClosed) {
 					log.Println(err)
 				}
 				break
@@ -172,9 +176,6 @@ func cmdRun(fl Flags) (int, error) {
 	if runCmdPrintEnvFlag {
 		printEnvironment()
 	}
-
-	// TODO: This is TEMPORARY, until the RCs
-	moveStorage()
 
 	// load the config, depending on flags
 	var config []byte
@@ -277,7 +278,7 @@ func cmdRun(fl Flags) (int, error) {
 func cmdStop(fl Flags) (int, error) {
 	stopCmdAddrFlag := fl.String("address")
 
-	err := apiRequest(stopCmdAddrFlag, http.MethodPost, "/stop", nil)
+	err := apiRequest(stopCmdAddrFlag, http.MethodPost, "/stop", nil, nil)
 	if err != nil {
 		caddy.Log().Warn("failed using API to stop instance", zap.Error(err))
 		return caddy.ExitCodeFailedStartup, err
@@ -290,6 +291,7 @@ func cmdReload(fl Flags) (int, error) {
 	reloadCmdConfigFlag := fl.String("config")
 	reloadCmdConfigAdapterFlag := fl.String("adapter")
 	reloadCmdAddrFlag := fl.String("address")
+	reloadCmdForceFlag := fl.Bool("force")
 
 	// get the config in caddy's native format
 	config, configFile, err := loadConfig(reloadCmdConfigFlag, reloadCmdConfigAdapterFlag)
@@ -314,7 +316,13 @@ func cmdReload(fl Flags) (int, error) {
 		adminAddr = tmpStruct.Admin.Listen
 	}
 
-	err = apiRequest(adminAddr, http.MethodPost, "/load", bytes.NewReader(config))
+	// optionally force a config reload
+	headers := make(http.Header)
+	if reloadCmdForceFlag {
+		headers.Set("Cache-Control", "must-revalidate")
+	}
+
+	err = apiRequest(adminAddr, http.MethodPost, "/load", headers, bytes.NewReader(config))
 	if err != nil {
 		return caddy.ExitCodeFailedStartup, fmt.Errorf("sending configuration to instance: %v", err)
 	}
@@ -323,19 +331,7 @@ func cmdReload(fl Flags) (int, error) {
 }
 
 func cmdVersion(_ Flags) (int, error) {
-	goModule := caddy.GoModule()
-	fmt.Print(goModule.Version)
-	if goModule.Sum != "" {
-		// a build with a known version will also have a checksum
-		fmt.Printf(" %s", goModule.Sum)
-	}
-	if goModule.Replace != nil {
-		fmt.Printf(" => %s", goModule.Replace.Path)
-		if goModule.Replace.Version != "" {
-			fmt.Printf(" %s", goModule.Replace.Version)
-		}
-	}
-	fmt.Println()
+	fmt.Println(CaddyVersion())
 	return caddy.ExitCodeSuccess, nil
 }
 
@@ -345,8 +341,11 @@ func cmdBuildInfo(fl Flags) (int, error) {
 		return caddy.ExitCodeFailedStartup, fmt.Errorf("no build information")
 	}
 
-	fmt.Printf("path: %s\n", bi.Path)
-	fmt.Printf("main: %s %s %s\n", bi.Main.Path, bi.Main.Version, bi.Main.Sum)
+	fmt.Printf("go_version: %s\n", runtime.Version())
+	fmt.Printf("go_os:      %s\n", runtime.GOOS)
+	fmt.Printf("go_arch:    %s\n", runtime.GOARCH)
+	fmt.Printf("path:       %s\n", bi.Path)
+	fmt.Printf("main:       %s %s %s\n", bi.Main.Path, bi.Main.Version, bi.Main.Sum)
 	fmt.Println("dependencies:")
 
 	for _, goMod := range bi.Deps {
@@ -360,59 +359,60 @@ func cmdBuildInfo(fl Flags) (int, error) {
 }
 
 func cmdListModules(fl Flags) (int, error) {
+	packages := fl.Bool("packages")
 	versions := fl.Bool("versions")
 
-	bi, ok := debug.ReadBuildInfo()
-	if !ok || !versions {
-		// if there's no build information,
-		// just print out the modules
+	printModuleInfo := func(mi moduleInfo) {
+		fmt.Print(mi.caddyModuleID)
+		if versions && mi.goModule != nil {
+			fmt.Print(" " + mi.goModule.Version)
+		}
+		if packages && mi.goModule != nil {
+			fmt.Print(" " + mi.goModule.Path)
+			if mi.goModule.Replace != nil {
+				fmt.Print(" => " + mi.goModule.Replace.Path)
+			}
+		}
+		if mi.err != nil {
+			fmt.Printf(" [%v]", mi.err)
+		}
+		fmt.Println()
+	}
+
+	// organize modules by whether they come with the standard distribution
+	standard, nonstandard, unknown, err := getModules()
+	if err != nil {
+		// oh well, just print the module IDs and exit
 		for _, m := range caddy.Modules() {
 			fmt.Println(m)
 		}
 		return caddy.ExitCodeSuccess, nil
 	}
 
-	for _, modID := range caddy.Modules() {
-		modInfo, err := caddy.GetModule(modID)
-		if err != nil {
-			// that's weird
-			fmt.Println(modID)
-			continue
+	if len(standard) > 0 {
+		for _, mod := range standard {
+			printModuleInfo(mod)
 		}
-
-		// to get the Caddy plugin's version info, we need to know
-		// the package that the Caddy module's value comes from; we
-		// can use reflection but we need a non-pointer value (I'm
-		// not sure why), and since New() should return a pointer
-		// value, we need to dereference it first
-		iface := interface{}(modInfo.New())
-		if rv := reflect.ValueOf(iface); rv.Kind() == reflect.Ptr {
-			iface = reflect.New(reflect.TypeOf(iface).Elem()).Elem().Interface()
-		}
-		modPkgPath := reflect.TypeOf(iface).PkgPath()
-
-		// now we find the Go module that the Caddy module's package
-		// belongs to; we assume the Caddy module package path will
-		// be prefixed by its Go module path, and we will choose the
-		// longest matching prefix in case there are nested modules
-		var matched *debug.Module
-		for _, dep := range bi.Deps {
-			if strings.HasPrefix(modPkgPath, dep.Path) {
-				if matched == nil || len(dep.Path) > len(matched.Path) {
-					matched = dep
-				}
-			}
-		}
-
-		// if we could find no matching module, just print out
-		// the module ID instead
-		if matched == nil {
-			fmt.Println(modID)
-			continue
-		}
-
-		fmt.Printf("%s %s\n", modID, matched.Version)
 	}
+	fmt.Printf("\n  Standard modules: %d\n", len(standard))
+	if len(nonstandard) > 0 {
+		if len(standard) > 0 {
+			fmt.Println()
+		}
+		for _, mod := range nonstandard {
+			printModuleInfo(mod)
+		}
+	}
+	fmt.Printf("\n  Non-standard modules: %d\n", len(nonstandard))
+	if len(unknown) > 0 {
+		if len(standard) > 0 || len(nonstandard) > 0 {
+			fmt.Println()
+		}
+		for _, mod := range unknown {
+			printModuleInfo(mod)
+		}
+	}
+	fmt.Printf("\n  Unknown modules: %d\n", len(unknown))
 
 	return caddy.ExitCodeSuccess, nil
 }
@@ -463,16 +463,24 @@ func cmdAdaptConfig(fl Flags) (int, error) {
 			fmt.Errorf("reading input file: %v", err)
 	}
 
-	opts := make(map[string]interface{})
-	if adaptCmdPrettyFlag {
-		opts["pretty"] = "true"
-	}
-	opts["filename"] = adaptCmdInputFlag
+	opts := map[string]interface{}{"filename": adaptCmdInputFlag}
 
 	adaptedConfig, warnings, err := cfgAdapter.Adapt(input, opts)
 	if err != nil {
 		return caddy.ExitCodeFailedStartup, err
 	}
+
+	if adaptCmdPrettyFlag {
+		var prettyBuf bytes.Buffer
+		err = json.Indent(&prettyBuf, adaptedConfig, "", "\t")
+		if err != nil {
+			return caddy.ExitCodeFailedStartup, err
+		}
+		adaptedConfig = prettyBuf.Bytes()
+	}
+
+	// print result to stdout
+	fmt.Println(string(adaptedConfig))
 
 	// print warnings to stderr
 	for _, warn := range warnings {
@@ -482,9 +490,6 @@ func cmdAdaptConfig(fl Flags) (int, error) {
 		}
 		fmt.Fprintf(os.Stderr, "[WARNING][%s] %s:%d: %s\n", adaptCmdAdapterFlag, warn.File, warn.Line, msg)
 	}
-
-	// print result to stdout
-	fmt.Println(string(adaptedConfig))
 
 	// validate output if requested
 	if adaptCmdValidateFlag {
@@ -631,7 +636,7 @@ commands:
 // apiRequest makes an API request to the endpoint adminAddr with the
 // given HTTP method and request URI. If body is non-nil, it will be
 // assumed to be Content-Type application/json.
-func apiRequest(adminAddr, method, uri string, body io.Reader) error {
+func apiRequest(adminAddr, method, uri string, headers http.Header, body io.Reader) error {
 	// parse the admin address
 	if adminAddr == "" {
 		adminAddr = caddy.DefaultAdminListen
@@ -671,6 +676,9 @@ func apiRequest(adminAddr, method, uri string, body io.Reader) error {
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	for k, v := range headers {
+		req.Header[k] = v
+	}
 
 	// make an HTTP client that dials our network type, since admin
 	// endpoints aren't always TCP, which is what the default transport
@@ -699,4 +707,10 @@ func apiRequest(adminAddr, method, uri string, body io.Reader) error {
 	}
 
 	return nil
+}
+
+type moduleInfo struct {
+	caddyModuleID string
+	goModule      *debug.Module
+	err           error
 }

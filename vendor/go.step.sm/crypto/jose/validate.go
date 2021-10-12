@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	"go.step.sm/crypto/keyutil"
-	"go.step.sm/crypto/pemutil"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -45,31 +44,26 @@ func ValidateSSHPOP(certFile string, key interface{}) (string, error) {
 	return base64.StdEncoding.EncodeToString(cert.Marshal()), nil
 }
 
-func validateX5(certFile string, key interface{}) ([]*x509.Certificate, error) {
-	if certFile == "" {
-		return nil, errors.New("certfile cannot be empty")
-	}
-	certs, err := pemutil.ReadCertificateBundle(certFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading certificate chain from file")
+func validateX5(certs []*x509.Certificate, key interface{}) error {
+	if len(certs) == 0 {
+		return errors.New("certs cannot be empty")
 	}
 
-	if err = keyutil.VerifyPair(certs[0].PublicKey, key); err != nil {
-		return nil, errors.Wrap(err, "error verifying certificate and key")
+	if err := keyutil.VerifyPair(certs[0].PublicKey, key); err != nil {
+		return errors.Wrap(err, "error verifying certificate and key")
 	}
 
 	if certs[0].KeyUsage&x509.KeyUsageDigitalSignature == 0 {
-		return nil, errors.New("certificate/private-key pair used to sign " +
+		return errors.New("certificate/private-key pair used to sign " +
 			"token is not approved for digital signature")
 	}
-	return certs, nil
+	return nil
 }
 
 // ValidateX5C validates the given certificate chain and key for use as a token
 // signer and x5t header.
-func ValidateX5C(certFile string, key interface{}) ([]string, error) {
-	certs, err := validateX5(certFile, key)
-	if err != nil {
+func ValidateX5C(certs []*x509.Certificate, key interface{}) ([]string, error) {
+	if err := validateX5(certs, key); err != nil {
 		return nil, errors.Wrap(err, "ValidateX5C")
 	}
 	strs := make([]string, len(certs))
@@ -81,9 +75,8 @@ func ValidateX5C(certFile string, key interface{}) ([]string, error) {
 
 // ValidateX5T validates the given certificate and key for use as a token signer
 // and x5t header.
-func ValidateX5T(certFile string, key interface{}) (string, error) {
-	certs, err := validateX5(certFile, key)
-	if err != nil {
+func ValidateX5T(certs []*x509.Certificate, key interface{}) (string, error) {
+	if err := validateX5(certs, key); err != nil {
 		return "", errors.Wrap(err, "ValidateX5T")
 	}
 	// x5t is the base64 URL encoded SHA1 thumbprint

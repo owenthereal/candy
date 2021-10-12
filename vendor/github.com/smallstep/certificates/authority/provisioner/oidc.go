@@ -54,6 +54,7 @@ type openIDPayload struct {
 // ClientSecret is mandatory, but it can be an empty string.
 type OIDC struct {
 	*base
+	ID                    string   `json:"-"`
 	Type                  string   `json:"type"`
 	Name                  string   `json:"name"`
 	ClientID              string   `json:"clientID"`
@@ -86,6 +87,21 @@ func (o *OIDC) IsAdmin(email string) bool {
 	return false
 }
 
+// IsAdminGroup returns true if the one group in the given list is in the Admins
+// allowlist, false otherwise.
+func (o *OIDC) IsAdminGroup(groups []string) bool {
+	for _, g := range groups {
+		// The groups and emails can be in the same array for now, but consider
+		// making a specialized option later.
+		for _, gadmin := range o.Admins {
+			if g == gadmin {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func sanitizeEmail(email string) string {
 	if i := strings.LastIndex(email, "@"); i >= 0 {
 		email = email[:i] + strings.ToLower(email[i:])
@@ -96,6 +112,15 @@ func sanitizeEmail(email string) string {
 // GetID returns the provisioner unique identifier, the OIDC provisioner the
 // uses the clientID for this.
 func (o *OIDC) GetID() string {
+	if o.ID != "" {
+		return o.ID
+	}
+	return o.GetIDForToken()
+}
+
+// GetIDForToken returns an identifier that will be used to load the provisioner
+// from a token.
+func (o *OIDC) GetIDForToken() string {
 	return o.ClientID
 }
 
@@ -327,7 +352,7 @@ func (o *OIDC) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 	// an admin, in that case we will use the CR template.
 	defaultTemplate := x509util.DefaultLeafTemplate
 	if !o.Options.GetX509Options().HasTemplate() && o.IsAdmin(claims.Email) {
-		defaultTemplate = x509util.CertificateRequestTemplate
+		defaultTemplate = x509util.DefaultAdminLeafTemplate
 	}
 
 	templateOptions, err := CustomTemplateOptions(o.Options, data, defaultTemplate)
@@ -352,7 +377,7 @@ func (o *OIDC) AuthorizeSign(ctx context.Context, token string) ([]SignOption, e
 // certificate was configured to allow renewals.
 func (o *OIDC) AuthorizeRenew(ctx context.Context, cert *x509.Certificate) error {
 	if o.claimer.IsDisableRenewal() {
-		return errs.Unauthorized("oidc.AuthorizeRenew; renew is disabled for oidc provisioner %s", o.GetID())
+		return errs.Unauthorized("oidc.AuthorizeRenew; renew is disabled for oidc provisioner '%s'", o.GetName())
 	}
 	return nil
 }
@@ -360,7 +385,7 @@ func (o *OIDC) AuthorizeRenew(ctx context.Context, cert *x509.Certificate) error
 // AuthorizeSSHSign returns the list of SignOption for a SignSSH request.
 func (o *OIDC) AuthorizeSSHSign(ctx context.Context, token string) ([]SignOption, error) {
 	if !o.claimer.IsSSHCAEnabled() {
-		return nil, errs.Unauthorized("oidc.AuthorizeSSHSign; sshCA is disabled for oidc provisioner %s", o.GetID())
+		return nil, errs.Unauthorized("oidc.AuthorizeSSHSign; sshCA is disabled for oidc provisioner '%s'", o.GetName())
 	}
 	claims, err := o.authorizeToken(token)
 	if err != nil {
@@ -372,7 +397,8 @@ func (o *OIDC) AuthorizeSSHSign(ctx context.Context, token string) ([]SignOption
 	}
 
 	// Get the identity using either the default identityFunc or one injected
-	// externally.
+	// externally. Note that the PreferredUsername might be empty.
+	// TBD: Would preferred_username present a safety issue here?
 	iden, err := o.getIdentityFunc(ctx, o, claims.Email)
 	if err != nil {
 		return nil, errs.Wrap(http.StatusInternalServerError, err, "oidc.AuthorizeSSHSign")
@@ -395,6 +421,9 @@ func (o *OIDC) AuthorizeSSHSign(ctx context.Context, token string) ([]SignOption
 	// Use the default template unless no-templates are configured and email is
 	// an admin, in that case we will use the parameters in the request.
 	isAdmin := o.IsAdmin(claims.Email)
+	if !isAdmin && len(claims.Groups) > 0 {
+		isAdmin = o.IsAdminGroup(claims.Groups)
+	}
 	defaultTemplate := sshutil.DefaultTemplate
 	if isAdmin && !o.Options.GetSSHOptions().HasTemplate() {
 		defaultTemplate = sshutil.DefaultAdminTemplate

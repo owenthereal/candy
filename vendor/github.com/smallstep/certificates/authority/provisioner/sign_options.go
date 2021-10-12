@@ -117,6 +117,36 @@ func (v defaultPublicKeyValidator) Valid(req *x509.CertificateRequest) error {
 	return nil
 }
 
+// publicKeyMinimumLengthValidator validates the length (in bits) of the public key
+// of a certificate request is at least a certain length
+type publicKeyMinimumLengthValidator struct {
+	length int
+}
+
+// newPublicKeyMinimumLengthValidator creates a new publicKeyMinimumLengthValidator
+// with the given length as its minimum value
+// TODO: change the defaultPublicKeyValidator to have a configurable length instead?
+func newPublicKeyMinimumLengthValidator(length int) publicKeyMinimumLengthValidator {
+	return publicKeyMinimumLengthValidator{
+		length: length,
+	}
+}
+
+// Valid checks that certificate request common name matches the one configured.
+func (v publicKeyMinimumLengthValidator) Valid(req *x509.CertificateRequest) error {
+	switch k := req.PublicKey.(type) {
+	case *rsa.PublicKey:
+		minimumLengthInBytes := v.length / 8
+		if k.Size() < minimumLengthInBytes {
+			return errors.Errorf("rsa key in CSR must be at least %d bits (%d bytes)", v.length, minimumLengthInBytes)
+		}
+	case *ecdsa.PublicKey, ed25519.PublicKey:
+	default:
+		return errors.Errorf("unrecognized public key of type '%T' in CSR", k)
+	}
+	return nil
+}
+
 // commonNameValidator validates the common name of a certificate request.
 type commonNameValidator string
 
@@ -154,6 +184,9 @@ type dnsNamesValidator []string
 // Valid checks that certificate request DNS Names match those configured in
 // the bootstrap (token) flow.
 func (v dnsNamesValidator) Valid(req *x509.CertificateRequest) error {
+	if len(req.DNSNames) == 0 {
+		return nil
+	}
 	want := make(map[string]bool)
 	for _, s := range v {
 		want[s] = true
@@ -174,6 +207,9 @@ type ipAddressesValidator []net.IP
 // Valid checks that certificate request IP Addresses match those configured in
 // the bootstrap (token) flow.
 func (v ipAddressesValidator) Valid(req *x509.CertificateRequest) error {
+	if len(req.IPAddresses) == 0 {
+		return nil
+	}
 	want := make(map[string]bool)
 	for _, ip := range v {
 		want[ip.String()] = true
@@ -194,6 +230,9 @@ type emailAddressesValidator []string
 // Valid checks that certificate request IP Addresses match those configured in
 // the bootstrap (token) flow.
 func (v emailAddressesValidator) Valid(req *x509.CertificateRequest) error {
+	if len(req.EmailAddresses) == 0 {
+		return nil
+	}
 	want := make(map[string]bool)
 	for _, s := range v {
 		want[s] = true
@@ -214,6 +253,9 @@ type urisValidator []*url.URL
 // Valid checks that certificate request IP Addresses match those configured in
 // the bootstrap (token) flow.
 func (v urisValidator) Valid(req *x509.CertificateRequest) error {
+	if len(req.URIs) == 0 {
+		return nil
+	}
 	want := make(map[string]bool)
 	for _, u := range v {
 		want[u.String()] = true

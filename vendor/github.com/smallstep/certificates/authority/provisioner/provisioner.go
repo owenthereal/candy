@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	stderrors "errors"
 	"net/url"
 	"regexp"
 	"strings"
@@ -17,6 +18,7 @@ import (
 // Interface is the interface that all provisioner types must implement.
 type Interface interface {
 	GetID() string
+	GetIDForToken() string
 	GetTokenID(token string) (string, error)
 	GetName() string
 	GetType() Type
@@ -30,6 +32,17 @@ type Interface interface {
 	AuthorizeSSHRenew(ctx context.Context, token string) (*ssh.Certificate, error)
 	AuthorizeSSHRekey(ctx context.Context, token string) (*ssh.Certificate, []SignOption, error)
 }
+
+// ErrAllowTokenReuse is an error that is returned by provisioners that allows
+// the reuse of tokens.
+//
+// This is, for example, returned by the Azure provisioner when
+// DisableTrustOnFirstUse is set to true. Azure caches tokens for up to 24hr and
+// has no mechanism for getting a different token - this can be an issue when
+// rebooting a VM. In contrast, AWS and GCP have facilities for requesting a new
+// token. Therefore, for the Azure provisioner we are enabling token reuse, with
+// the understanding that we are not following security best practices
+var ErrAllowTokenReuse = stderrors.New("allow token reuse")
 
 // Audiences stores all supported audiences by request type.
 type Audiences struct {
@@ -141,6 +154,8 @@ const (
 	TypeK8sSA Type = 8
 	// TypeSSHPOP is used to indicate the SSHPOP provisioners.
 	TypeSSHPOP Type = 9
+	// TypeSCEP is used to indicate the SCEP provisioners
+	TypeSCEP Type = 10
 )
 
 // String returns the string representation of the type.
@@ -164,6 +179,8 @@ func (t Type) String() string {
 		return "K8sSA"
 	case TypeSSHPOP:
 		return "SSHPOP"
+	case TypeSCEP:
+		return "SCEP"
 	default:
 		return ""
 	}
@@ -232,6 +249,8 @@ func (l *List) UnmarshalJSON(data []byte) error {
 			p = &K8sSA{}
 		case "sshpop":
 			p = &SSHPOP{}
+		case "scep":
+			p = &SCEP{}
 		default:
 			// Skip unsupported provisioners. A client using this method may be
 			// compiled with a version of smallstep/certificates that does not
@@ -339,31 +358,48 @@ type Permissions struct {
 // GetIdentityFunc is a function that returns an identity.
 type GetIdentityFunc func(ctx context.Context, p Interface, email string) (*Identity, error)
 
-// DefaultIdentityFunc return a default identity depending on the provisioner type.
+// DefaultIdentityFunc return a default identity depending on the provisioner
+// type. For OIDC email is always present and the usernames might
+// contain empty strings.
 func DefaultIdentityFunc(ctx context.Context, p Interface, email string) (*Identity, error) {
 	switch k := p.(type) {
 	case *OIDC:
 		// OIDC principals would be:
-		// 1. Sanitized local.
-		// 2. Raw local (if different).
-		// 3. Email address.
+		// ~~1. Preferred usernames.~~ Note: Under discussion, currently disabled
+		// 2. Sanitized local.
+		// 3. Raw local (if different).
+		// 4. Email address.
 		name := SanitizeSSHUserPrincipal(email)
 		if !sshUserRegex.MatchString(name) {
 			return nil, errors.Errorf("invalid principal '%s' from email '%s'", name, email)
 		}
 		usernames := []string{name}
 		if i := strings.LastIndex(email, "@"); i >= 0 {
-			if local := email[:i]; !strings.EqualFold(local, name) {
-				usernames = append(usernames, local)
-			}
+			usernames = append(usernames, email[:i])
 		}
 		usernames = append(usernames, email)
 		return &Identity{
-			Usernames: usernames,
+			Usernames: SanitizeStringSlices(usernames),
 		}, nil
 	default:
 		return nil, errors.Errorf("provisioner type '%T' not supported by identity function", k)
 	}
+}
+
+// SanitizeStringSlices removes duplicated an empty strings.
+func SanitizeStringSlices(original []string) []string {
+	output := []string{}
+	seen := make(map[string]struct{})
+	for _, entry := range original {
+		if entry == "" {
+			continue
+		}
+		if _, value := seen[entry]; !value {
+			seen[entry] = struct{}{}
+			output = append(output, entry)
+		}
+	}
+	return output
 }
 
 // MockProvisioner for testing
@@ -371,6 +407,7 @@ type MockProvisioner struct {
 	Mret1, Mret2, Mret3 interface{}
 	Merr                error
 	MgetID              func() string
+	MgetIDForToken      func() string
 	MgetTokenID         func(string) (string, error)
 	MgetName            func() string
 	MgetType            func() Type
@@ -389,6 +426,14 @@ type MockProvisioner struct {
 func (m *MockProvisioner) GetID() string {
 	if m.MgetID != nil {
 		return m.MgetID()
+	}
+	return m.Mret1.(string)
+}
+
+// GetIDForToken mock
+func (m *MockProvisioner) GetIDForToken() string {
+	if m.MgetIDForToken != nil {
+		return m.MgetIDForToken()
 	}
 	return m.Mret1.(string)
 }

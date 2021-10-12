@@ -3,6 +3,7 @@ package randutil
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"io"
 	"math/big"
 
@@ -65,4 +66,38 @@ func Alphanumeric(length int) (string, error) {
 // function correctly, in which case the caller must not continue.
 func ASCII(length int) (string, error) {
 	return String(length, ascii)
+}
+
+// Alphabet returns a random string of the given length using the 52
+// alphabetic characters in the POSIX/C locale (a-z+A-Z).
+func Alphabet(length int) (string, error) {
+	return String(length, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+}
+
+// UUIDv4 returns the string representation of a UUID version 4. Because 6 bits
+// are used to indicate the version 4 and the variant 10, the randomly generated
+// part has 122 bits.
+func UUIDv4() (string, error) {
+	var uuid [16]byte
+	_, err := io.ReadFull(rand.Reader, uuid[:])
+	if err != nil {
+		return "", errors.Wrap(err, "error generating uuid")
+	}
+	uuid[6] = (uuid[6] & 0x0f) | 0x40 // Version 4
+	uuid[8] = (uuid[8] & 0x3f) | 0x80 // Variant is 10
+	return encodeUUID(uuid), nil
+}
+
+func encodeUUID(uuid [16]byte) string {
+	buf := make([]byte, 36)
+	hex.Encode(buf, uuid[:4])
+	buf[8] = '-'
+	hex.Encode(buf[9:13], uuid[4:6])
+	buf[13] = '-'
+	hex.Encode(buf[14:18], uuid[6:8])
+	buf[18] = '-'
+	hex.Encode(buf[19:23], uuid[8:10])
+	buf[23] = '-'
+	hex.Encode(buf[24:], uuid[10:])
+	return string(buf)
 }
