@@ -56,7 +56,7 @@ EOF
 ### Linux
 
 ```
-go get -u github.com/owenthereal/candy/cmd/candy
+go install github.com/owenthereal/candy/cmd/candy@latest
 ```
 
 After installing the `candy` binary, you also need to create a [network name resolution config](https://www.freedesktop.org/software/systemd/man/resolved.conf.html) in `/usr/lib/systemd/resolved.conf.d/CONFIG`.
