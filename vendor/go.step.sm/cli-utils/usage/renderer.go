@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 	"unicode"
 
-	"github.com/samfoo/ansi"
+	"github.com/mgutz/ansi"
 	md "go.step.sm/cli-utils/pkg/blackfriday"
 )
 

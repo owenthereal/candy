@@ -133,8 +133,13 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 		Check2: check,
 	}
 
+	password, err := ctx.promptEncryptPassword()
+	if err != nil {
+		return nil, err
+	}
+
 	var blockSize int
-	if ctx.password == nil {
+	if password == nil {
 		w.CipherName = "none"
 		w.KdfName = "none"
 		blockSize = 8
@@ -253,7 +258,7 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 		w.PrivKeyBlock = append(w.PrivKeyBlock, byte(i+1))
 	}
 
-	if ctx.password != nil {
+	if password != nil {
 		// Create encryption key derivation the password.
 		salt, err := randutil.Salt(sshDefaultSaltLength)
 		if err != nil {
@@ -266,7 +271,7 @@ func SerializeOpenSSHPrivateKey(key crypto.PrivateKey, opts ...Options) (*pem.Bl
 		w.KdfOpts = string(ssh.Marshal(kdfOpts))
 
 		// Derive key to encrypt the private key block.
-		k, err := bcrypt_pbkdf.Key(ctx.password, salt, sshDefaultRounds, sshDefaultKeyLength+aes.BlockSize)
+		k, err := bcrypt_pbkdf.Key(password, salt, sshDefaultRounds, sshDefaultKeyLength+aes.BlockSize)
 		if err != nil {
 			return nil, errors.Wrap(err, "error deriving decryption key")
 		}

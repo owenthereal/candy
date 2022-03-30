@@ -35,6 +35,18 @@ func init() {
 	readline.Stdout = &stderr{}
 }
 
+// Init initializes the terminal to be used by this package. This is generally a
+// noop except for windows.
+func Init() {
+	setConsoleMode()
+}
+
+// Reset sets the terminal as it was before the initialization. This is
+// generally a noop except for windows.
+func Reset() {
+	resetConsoleMode()
+}
+
 // Print uses templates to print the arguments formated to os.Stderr.
 func Print(args ...interface{}) error {
 	var o options

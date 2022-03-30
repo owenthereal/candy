@@ -502,6 +502,12 @@ func (s *session) preSetup() {
 		protocol.ByteCount(s.config.InitialConnectionReceiveWindow),
 		protocol.ByteCount(s.config.MaxConnectionReceiveWindow),
 		s.onHasConnectionWindowUpdate,
+		func(size protocol.ByteCount) bool {
+			if s.config.AllowConnectionWindowIncrease == nil {
+				return true
+			}
+			return s.config.AllowConnectionWindowIncrease(s, uint64(size))
+		},
 		s.rttStats,
 		s.logger,
 	)
@@ -590,7 +596,9 @@ runLoop:
 				default:
 				}
 			}
-		} else if !processedUndecryptablePacket {
+		}
+		// If we processed any undecryptable packets, jump to the resetting of the timers directly.
+		if !processedUndecryptablePacket {
 			select {
 			case closeErr = <-s.closeChan:
 				break runLoop
