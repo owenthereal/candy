@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/owenthereal/candy"
+	"go.uber.org/zap"
 )
 
 func Test_Server(t *testing.T) {
@@ -40,7 +42,12 @@ func Test_Server(t *testing.T) {
 	})
 	errch := make(chan error)
 	go func() {
-		errch <- svr.Run(context.Background())
+		err := svr.Run(context.Background())
+		if err != nil {
+			candy.Log().Error("error running server", zap.Error(err))
+		}
+
+		errch <- err
 	}()
 
 	t.Run("http addr", func(t *testing.T) {
