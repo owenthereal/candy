@@ -16,7 +16,6 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-        id: go
       - name: Compile
         run: make install
   test:
@@ -33,7 +32,10 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-        id: go
+      - name: Install certutil on macos
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install nss
       - name: Test
         run: make test
   vet:

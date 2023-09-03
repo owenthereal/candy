@@ -70,7 +70,7 @@ func (c *caddyServer) waitForServer(ctx context.Context) error {
 			if err == nil {
 				return nil
 			} else {
-				c.cfg.Logger.Error("error waiting for Caddy server", zap.Error(err))
+				c.cfg.Logger.Debug("error waiting for Caddy server", zap.Error(err))
 			}
 		}
 	}
