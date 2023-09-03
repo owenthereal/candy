@@ -1,7 +1,7 @@
 package candy
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -104,7 +104,7 @@ func Test_AppService_FindApps(t *testing.T) {
 			dir := t.TempDir()
 
 			for k, v := range cc.Hosts {
-				if err := ioutil.WriteFile(filepath.Join(dir, k), []byte(v), 0o0644); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, k), []byte(v), 0o0644); err != nil {
 					t.Fatalf("error writing test hosts: %s", err)
 				}
 			}

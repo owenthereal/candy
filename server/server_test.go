@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -29,7 +28,7 @@ func Test_Server(t *testing.T) {
 		tlds      = []string{"go-test"}
 	)
 
-	if err := ioutil.WriteFile(filepath.Join(hostRoot, "app"), []byte(adminAddr), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(hostRoot, "app"), []byte(adminAddr), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

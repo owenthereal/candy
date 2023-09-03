@@ -5,7 +5,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,7 +68,7 @@ func runSetupRunE(c *cobra.Command, args []string) error {
 		logger  = candy.Log()
 	)
 
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err == nil {
 		if string(b) == content {
 			logger.Info("network name resolution file unchanged", zap.String("file", file))
@@ -78,7 +77,7 @@ func runSetupRunE(c *cobra.Command, args []string) error {
 	}
 
 	logger.Info("writing network name resolution file", zap.String("file", file))
-	if err := ioutil.WriteFile(file, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		return err
 	}
 

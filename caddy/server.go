@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -273,7 +272,7 @@ func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, v inte
 
 	// if it didn't work, let the user know
 	if resp.StatusCode >= 400 {
-		respBody, err := ioutil.ReadAll(io.LimitReader(resp.Body, 1024*10))
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1024*10))
 		if err != nil {
 			return fmt.Errorf("HTTP %d: reading error message: %v", resp.StatusCode, err)
 		}
