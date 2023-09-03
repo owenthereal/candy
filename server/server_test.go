@@ -41,8 +41,12 @@ func Test_Server(t *testing.T) {
 		DnsAddr:   dnsAddr,
 	})
 	errch := make(chan error)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
-		err := svr.Run(context.Background())
+		err := svr.Run(ctx)
 		if err != nil {
 			candy.Log().Error("error running server", zap.Error(err))
 		}
@@ -259,8 +263,12 @@ func Test_Server_Shutdown(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			errch := make(chan error)
 			srv := New(c.Config)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			go func() {
-				err := srv.Run(context.Background())
+				err := srv.Run(ctx)
 				if err != nil {
 					candy.Log().Error("error running server", zap.Error(err))
 				}
