@@ -2,9 +2,9 @@ package candy
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -29,7 +29,7 @@ type AppService struct {
 }
 
 func (f *AppService) FindApps() ([]App, error) {
-	files, err := ioutil.ReadDir(f.cfg.HostRoot)
+	files, err := os.ReadDir(f.cfg.HostRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (f *AppService) FindApps() ([]App, error) {
 			continue
 		}
 
-		b, err := ioutil.ReadFile(filepath.Join(f.cfg.HostRoot, file.Name()))
+		b, err := os.ReadFile(filepath.Join(f.cfg.HostRoot, file.Name()))
 		if err != nil {
 			return nil, err
 		}

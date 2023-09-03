@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -54,6 +53,29 @@ type caddyServer struct {
 	caddyCfgMutex sync.Mutex
 }
 
+func (c *caddyServer) waitForServer(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	t := time.NewTicker(1 * time.Second)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			c.cfg.Logger.Info("waiting for Caddy server", zap.Any("cfg", c.cfg))
+			err := c.apiRequest(ctx, http.MethodGet, "/config/", nil)
+			if err == nil {
+				return nil
+			} else {
+				c.cfg.Logger.Debug("error waiting for Caddy server", zap.Error(err))
+			}
+		}
+	}
+}
+
 func (c *caddyServer) Run(ctx context.Context) error {
 	c.cfg.Logger.Info("starting Caddy server", zap.Any("cfg", c.cfg))
 	defer c.cfg.Logger.Info("shutting down Caddy server")
@@ -61,6 +83,10 @@ func (c *caddyServer) Run(ctx context.Context) error {
 	c.ctx = ctx
 
 	if err := c.startServer(); err != nil {
+		return err
+	}
+
+	if err := c.waitForServer(ctx); err != nil {
 		return err
 	}
 
@@ -139,7 +165,6 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		),
 		Listen:    []string{c.cfg.HTTPAddr},
 		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: true},
-		AllowH2C:  true,
 	}
 
 	httpsServer := &caddyhttp.Server{
@@ -155,8 +180,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 			},
 			apps,
 		),
-		Listen:   []string{c.cfg.HTTPSAddr},
-		AllowH2C: true,
+		Listen: []string{c.cfg.HTTPSAddr},
 	}
 
 	// Best efforts of parsing corresponding port from addr
@@ -180,7 +204,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		Automation: &caddytls.AutomationConfig{
 			Policies: []*caddytls.AutomationPolicy{
 				{
-					Subjects: appHosts(apps),
+					SubjectsRaw: appHosts(apps),
 					IssuersRaw: []json.RawMessage{
 						caddyconfig.JSONModuleObject(caddytls.InternalIssuer{}, "module", "internal", nil),
 					},
@@ -275,7 +299,7 @@ func (c *caddyServer) apiRequest(ctx context.Context, method, uri string, v inte
 
 	// if it didn't work, let the user know
 	if resp.StatusCode >= 400 {
-		respBody, err := ioutil.ReadAll(io.LimitReader(resp.Body, 1024*10))
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1024*10))
 		if err != nil {
 			return fmt.Errorf("HTTP %d: reading error message: %v", resp.StatusCode, err)
 		}

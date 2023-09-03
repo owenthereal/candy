@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/owenthereal/candy"
+	"go.uber.org/zap"
 )
 
 func Test_Server(t *testing.T) {
@@ -26,7 +28,7 @@ func Test_Server(t *testing.T) {
 		tlds      = []string{"go-test"}
 	)
 
-	if err := ioutil.WriteFile(filepath.Join(hostRoot, "app"), []byte(adminAddr), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(hostRoot, "app"), []byte(adminAddr), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -39,8 +41,17 @@ func Test_Server(t *testing.T) {
 		DnsAddr:   dnsAddr,
 	})
 	errch := make(chan error)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
-		errch <- svr.Run(context.Background())
+		err := svr.Run(ctx)
+		if err != nil {
+			candy.Log().Error("error running server", zap.Error(err))
+		}
+
+		errch <- err
 	}()
 
 	t.Run("http addr", func(t *testing.T) {
@@ -50,7 +61,7 @@ func Test_Server(t *testing.T) {
 				return err
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
 			}
@@ -72,7 +83,7 @@ func Test_Server(t *testing.T) {
 				return err
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
 			}
@@ -94,7 +105,7 @@ func Test_Server(t *testing.T) {
 				return nil
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return nil
 			}
@@ -129,33 +140,33 @@ func Test_Server(t *testing.T) {
 	})
 
 	t.Run("add new domain", func(t *testing.T) {
-		if err := ioutil.WriteFile(filepath.Join(hostRoot, "app2"), []byte(adminAddr), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(hostRoot, "app2"), []byte(adminAddr), 0o644); err != nil {
 			t.Fatal(err)
-		}
-
-		r := &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				return net.Dial("udp", dnsAddr)
-			},
-		}
-
-		ips, err := r.LookupHost(context.Background(), "app2.go-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if diff := cmp.Diff([]string{"127.0.0.1"}, ips); diff != "" {
-			t.Fatalf("Unexpected IPs (-want +got): %s", diff)
 		}
 
 		waitUntil(t, 3, func() error {
+			r := &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					return net.Dial("udp", dnsAddr)
+				},
+			}
+
+			ips, err := r.LookupHost(context.Background(), "app2.go-test")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff([]string{"127.0.0.1"}, ips); diff != "" {
+				t.Fatalf("Unexpected IPs (-want +got): %s", diff)
+			}
+
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
 			if err != nil {
 				return nil
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return nil
 			}
@@ -214,12 +225,12 @@ func Test_Server_Shutdown(t *testing.T) {
 			Config: Config{
 				HostRoot:  hostRoot,
 				Domain:    tlds,
-				HttpAddr:  "invalid-addr",
+				HttpAddr:  "",
 				HttpsAddr: randomAddr(t),
-				AdminAddr: "", // TODO: running into caddy race issue with `go test -race` when replacing admin server. Disabling admin server for this and report upstream.
+				AdminAddr: randomAddr(t),
 				DnsAddr:   randomAddr(t),
 			},
-			WantErrMsg: "address invalid-addr: missing port in address",
+			WantErrMsg: "loading new config: loading http app module: http: invalid configuration: invalid listener address '': missing port in address",
 		},
 		{
 			Name: "invalid admin addr",
@@ -231,31 +242,38 @@ func Test_Server_Shutdown(t *testing.T) {
 				AdminAddr: "invalid-addr",
 				DnsAddr:   randomAddr(t),
 			},
-			WantErrMsg: "address invalid-addr: missing port in address",
+			WantErrMsg: "loading new config: starting caddy administration endpoint: listen tcp: lookup invalid-addr",
 		},
 		{
 			Name: "invalid host root",
 			Config: Config{
-				HostRoot:  "invalid-host-root",
+				HostRoot:  "/tmp/invalid-host-root",
 				Domain:    tlds,
 				HttpAddr:  randomAddr(t),
 				HttpsAddr: randomAddr(t),
 				AdminAddr: randomAddr(t),
 				DnsAddr:   randomAddr(t),
 			},
-			WantErrMsg: "invalid-host-root: no such file or directory",
+			WantErrMsg: "no such file or directory",
 		},
 	}
 
 	for _, c := range cases {
 		c := c
 		t.Run(c.Name, func(t *testing.T) {
-			//t.Parallel()
-
 			errch := make(chan error)
 			srv := New(c.Config)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			go func() {
-				errch <- srv.Run(context.Background())
+				err := srv.Run(ctx)
+				if err != nil {
+					candy.Log().Error("error running server", zap.Error(err))
+				}
+
+				errch <- err
 			}()
 
 			select {
@@ -275,7 +293,7 @@ func randomAddr(t *testing.T) string {
 }
 
 func randomPort(t *testing.T) string {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}

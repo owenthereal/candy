@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -41,36 +40,26 @@ func (d *dnsServer) Run(ctx context.Context) error {
 
 	var g run.Group
 	{
-		var wg sync.WaitGroup
-		wg.Add(1)
 		udp := &dns.Server{
 			Handler: mux,
 			Addr:    d.cfg.Addr,
 			Net:     "udp",
 		}
 		g.Add(func() error {
-			wg.Done()
 			return udp.ListenAndServe()
 		}, func(err error) {
-			// Wait for udp server before shutting it down
-			wg.Wait()
 			_ = udp.ShutdownContext(ctx)
 		})
 	}
 	{
-		var wg sync.WaitGroup
-		wg.Add(1)
 		tcp := &dns.Server{
 			Handler: mux,
 			Addr:    d.cfg.Addr,
 			Net:     "tcp",
 		}
 		g.Add(func() error {
-			wg.Done()
 			return tcp.ListenAndServe()
 		}, func(err error) {
-			// Wait for tcp server before shutting it down
-			wg.Wait()
 			_ = tcp.ShutdownContext(ctx)
 		})
 	}
