@@ -5,7 +5,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -75,7 +74,7 @@ func runSetupRunE(c *cobra.Command, args []string) error {
 		file := filepath.Join(resolverDir, "candy-"+domain)
 		content := fmt.Sprintf(resolverTmpl, domain, host, port)
 
-		b, err := ioutil.ReadFile(file)
+		b, err := os.ReadFile(file)
 		if err == nil {
 			if string(b) == content {
 				logger.Info("resolver configuration file unchanged", zap.String("file", file))
@@ -84,7 +83,7 @@ func runSetupRunE(c *cobra.Command, args []string) error {
 		}
 
 		logger.Info("writing resolver configuration file", zap.String("file", file))
-		if err := ioutil.WriteFile(file, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 			return err
 		}
 	}
