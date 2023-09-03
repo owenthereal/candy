@@ -9,10 +9,8 @@ jobs:
       matrix:
         os: [macos-13, ubuntu-latest]
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -25,10 +23,8 @@ jobs:
       matrix:
         os: [macos-13, ubuntu-latest]
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -45,8 +41,11 @@ jobs:
       matrix:
         os: [macos-13, ubuntu-latest]
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          check-latest: true
       - uses: golangci/golangci-lint-action@v3
         with:
           args: --timeout 180s
