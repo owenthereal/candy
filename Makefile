@@ -10,7 +10,7 @@ build:
 
 .PHONY: vet
 vet:
-	docker run --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
+	docker run --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:latest golangci-lint run -v --timeout 180
 
 .PHONY: test
 test:
