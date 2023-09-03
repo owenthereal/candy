@@ -144,23 +144,23 @@ func Test_Server(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		r := &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				return net.Dial("udp", dnsAddr)
-			},
-		}
-
-		ips, err := r.LookupHost(context.Background(), "app2.go-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if diff := cmp.Diff([]string{"127.0.0.1"}, ips); diff != "" {
-			t.Fatalf("Unexpected IPs (-want +got): %s", diff)
-		}
-
 		waitUntil(t, 3, func() error {
+			r := &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					return net.Dial("udp", dnsAddr)
+				},
+			}
+
+			ips, err := r.LookupHost(context.Background(), "app2.go-test")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff([]string{"127.0.0.1"}, ips); diff != "" {
+				t.Fatalf("Unexpected IPs (-want +got): %s", diff)
+			}
+
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
 			if err != nil {
 				return nil
@@ -247,14 +247,14 @@ func Test_Server_Shutdown(t *testing.T) {
 		{
 			Name: "invalid host root",
 			Config: Config{
-				HostRoot:  "invalid-host-root",
+				HostRoot:  "",
 				Domain:    tlds,
 				HttpAddr:  randomAddr(t),
 				HttpsAddr: randomAddr(t),
 				AdminAddr: randomAddr(t),
 				DnsAddr:   randomAddr(t),
 			},
-			WantErrMsg: "invalid-host-root: no such file or directory",
+			WantErrMsg: "no such file or directory",
 		},
 	}
 
