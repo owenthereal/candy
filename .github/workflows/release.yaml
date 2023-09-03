@@ -7,8 +7,7 @@ jobs:
     name: Bump Homebrew formula
     runs-on: ubuntu-latest
     steps:
-      - uses: mislav/bump-homebrew-formula-action@v1
-        if: "!contains(github.ref, '-')" # skip prereleases
+      - uses: mislav/bump-homebrew-formula-action@v2
         with:
           formula-name: candy
           homebrew-tap: owenthereal/homebrew-candy
