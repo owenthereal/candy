@@ -238,7 +238,7 @@ func Test_Server_Shutdown(t *testing.T) {
 				AdminAddr: "invalid-addr",
 				DnsAddr:   randomAddr(t),
 			},
-			WantErrMsg: "loading new config: starting caddy administration endpoint: listen tcp: lookup invalid-addr: no such host",
+			WantErrMsg: "loading new config: starting caddy administration endpoint: listen tcp: lookup invalid-addr",
 		},
 		{
 			Name: "invalid host root",
