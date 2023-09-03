@@ -139,7 +139,6 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		),
 		Listen:    []string{c.cfg.HTTPAddr},
 		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: true},
-		AllowH2C:  true,
 	}
 
 	httpsServer := &caddyhttp.Server{
@@ -155,8 +154,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 			},
 			apps,
 		),
-		Listen:   []string{c.cfg.HTTPSAddr},
-		AllowH2C: true,
+		Listen: []string{c.cfg.HTTPSAddr},
 	}
 
 	// Best efforts of parsing corresponding port from addr
@@ -180,7 +178,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 		Automation: &caddytls.AutomationConfig{
 			Policies: []*caddytls.AutomationPolicy{
 				{
-					Subjects: appHosts(apps),
+					SubjectsRaw: appHosts(apps),
 					IssuersRaw: []json.RawMessage{
 						caddyconfig.JSONModuleObject(caddytls.InternalIssuer{}, "module", "internal", nil),
 					},
