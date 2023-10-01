@@ -37,8 +37,8 @@ func init() {
 func addDefaultFlags(cmd *cobra.Command) {
 	cmd.Flags().String("host-root", filepath.Join(userHomeDir(), ".candy"), "Path to the directory containing applications that will be served by Candy")
 	cmd.Flags().StringSlice("domain", defaultDomains, "The top-level domains for which Candy will respond to DNS queries")
-	cmd.Flags().String("http-addr", ":28080", "The Proxy server HTTP address")
-	cmd.Flags().String("https-addr", ":28443", "The Proxy server HTTPS address")
+	cmd.Flags().String("http-addr", "127.0.0.1:28080", "The Proxy server HTTP address")
+	cmd.Flags().String("https-addr", "127.0.0.1:28443", "The Proxy server HTTPS address")
 	cmd.Flags().String("admin-addr", "127.0.0.1:22019", "The Proxy server administrative address")
 	cmd.Flags().String("dns-addr", defaultDNSAddr, "The DNS server address")
 	cmd.Flags().Bool("dns-local-ip", false, "DNS server responds DNS queries with local IP instead of 127.0.0.1")
@@ -46,7 +46,7 @@ func addDefaultFlags(cmd *cobra.Command) {
 }
 
 func runRunE(c *cobra.Command, args []string) error {
-	return startServer(c, context.Background())
+	return startServer(c, c.Context())
 }
 
 func startServer(c *cobra.Command, ctx context.Context) error {
