@@ -3,6 +3,7 @@ module github.com/owenthereal/candy
 go 1.21
 
 require (
+	github.com/bored-engineer/go-launchd v0.0.0-20230905041514-6aff1185c30f
 	github.com/caddyserver/caddy/v2 v2.7.4
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/go-cmp v0.5.9
