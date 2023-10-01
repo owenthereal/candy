@@ -42,6 +42,7 @@ func addDefaultFlags(cmd *cobra.Command) {
 	cmd.Flags().String("admin-addr", "127.0.0.1:22019", "The Proxy server administrative address")
 	cmd.Flags().String("dns-addr", defaultDNSAddr, "The DNS server address")
 	cmd.Flags().Bool("dns-local-ip", false, "DNS server responds DNS queries with local IP instead of 127.0.0.1")
+	cmd.Flags().Bool("debug", false, "Debug mode")
 }
 
 func runRunE(c *cobra.Command, args []string) error {

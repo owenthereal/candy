@@ -31,6 +31,7 @@ type Config struct {
 	AdminAddr string
 	TLDs      []string
 	HostRoot  string
+	Debug     bool
 	Logger    *zap.Logger
 }
 
@@ -158,13 +159,12 @@ func (c *caddyServer) loadConfig() (*caddy.Config, error) {
 func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	httpServer := &caddyhttp.Server{
 		Routes: caddyRoutes(
-			reverseproxy.HTTPTransport{
-				Versions: []string{"1.1", "2", "h2c"},
-			},
+			reverseproxy.HTTPTransport{},
 			apps,
 		),
 		Listen:    []string{c.cfg.HTTPAddr},
-		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: true},
+		AutoHTTPS: &caddyhttp.AutoHTTPSConfig{Disabled: true, DisableRedir: true},
+		Logs:      &caddyhttp.ServerLogConfig{},
 	}
 
 	httpsServer := &caddyhttp.Server{
@@ -175,9 +175,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 			},
 		},
 		Routes: caddyRoutes(
-			reverseproxy.HTTPTransport{
-				Versions: []string{"1.1", "2", "h2c"},
-			},
+			reverseproxy.HTTPTransport{},
 			apps,
 		),
 		Listen: []string{c.cfg.HTTPSAddr},
@@ -205,9 +203,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 			Policies: []*caddytls.AutomationPolicy{
 				{
 					SubjectsRaw: appHosts(apps),
-					IssuersRaw: []json.RawMessage{
-						caddyconfig.JSONModuleObject(caddytls.InternalIssuer{}, "module", "internal", nil),
-					},
+					IssuersRaw:  []json.RawMessage{json.RawMessage(`{"module":"internal"}`)},
 				},
 			},
 		},
@@ -218,6 +214,13 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 			"http": caddyconfig.JSON(httpApp, nil),
 			"tls":  caddyconfig.JSON(tls, nil),
 		},
+	}
+	if c.cfg.Debug {
+		ccfg.Logging = &caddy.Logging{
+			Logs: map[string]*caddy.CustomLog{
+				"default": {BaseLog: caddy.BaseLog{Level: zap.DebugLevel.CapitalString()}},
+			},
+		}
 	}
 
 	if c.cfg.AdminAddr == "" {
