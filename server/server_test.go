@@ -39,6 +39,7 @@ func Test_Server(t *testing.T) {
 		HttpsAddr: httpsAddr,
 		AdminAddr: adminAddr,
 		DnsAddr:   dnsAddr,
+		Debug:     true,
 	})
 	errch := make(chan error)
 
@@ -312,6 +313,7 @@ func waitUntil(tb testing.TB, waitInterval time.Duration, times int, fn func() e
 			return
 		}
 
+		tb.Logf("waiting, got error: %s", err)
 		time.Sleep(waitInterval)
 	}
 
