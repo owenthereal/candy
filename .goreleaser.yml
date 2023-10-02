@@ -31,7 +31,7 @@ brews:
   - repository:
       owner: owenthereal
       name: homebrew-candy
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.CI_GITHUB_TOKEN }}"
     commit_author:
       name: Owen Ou
       email: o@owenout.com
