@@ -247,7 +247,7 @@ func Test_Server_Shutdown(t *testing.T) {
 		{
 			Name: "invalid host root",
 			Config: Config{
-				HostRoot:  "/tmp/invalid-host-root",
+				HostRoot:  "/invalid-host-root",
 				Domain:    tlds,
 				HttpAddr:  randomAddr(t),
 				HttpsAddr: randomAddr(t),
