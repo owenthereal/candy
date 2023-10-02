@@ -40,7 +40,7 @@ brews:
     folder: Formula
     license: "Apache 2.0"
     dependencies:
-      - nss
+      - certutil
     custom_block: |
       head "https://github.com/owenthereal/candy.git"
     install: |
