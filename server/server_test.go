@@ -55,6 +55,10 @@ func Test_Server(t *testing.T) {
 		errch <- err
 	}()
 
+	http := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+
 	t.Run("http addr", func(t *testing.T) {
 		waitUntil(t, 5*time.Second, 10, func() error {
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/http/servers/http/listen/0", adminAddr))
