@@ -1,0 +1,116 @@
+project_name: candy
+builds:
+  - <<: &build_defaults
+      goos: [darwin, linux]
+      goarch: ["386", "amd64", "arm", "arm64"]
+      env:
+        - CGO_ENABLED=0
+    id: candy
+    binary: bin/candy
+    main: ./cmd/candy
+archives:
+  - id: nix
+    builds: [candy]
+    name_template: '{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+    wrap_in_directory: false
+    format: tar.gz
+    files:
+      - LICENSE*
+      - README*
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}-snapshot"
+release:
+  prerelease: auto
+  name_template: "Candy {{.Version}}"
+  github:
+    owner: owenthereal
+    name: candy
+brews:
+  - repository:
+      owner: owenthereal
+      name: homebrew-candy
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    commit_author:
+      name: Owen Ou
+      email: o@owenout.com
+    homepage: https://github.com/owenthereal/candy
+    description: Zero-config reverse proxy server
+    folder: Formula
+    license: "Apache 2.0"
+    dependencies:
+      - nss
+    custom_block: |
+      head "https://github.com/owenthereal/candy.git"
+    install: |
+      bin.install "bin/candy"
+      prefix.install_metafiles
+      etc.install "example/candyconfig" => "candyconfig"
+      (etc/"resolver").install "example/mac/candy-test" => "candy-test"
+    service: |
+      run [opt_bin/"candy", "launch", "--dns-local-ip"]
+      keep_alive true
+      run_at_load true
+      sockets "Socket" => "tcp://0.0.0.0:80", "SocketTLS" => "tcp://0.0.0.0:443"
+      working_dir HOMEBREW_PREFIX
+      log_path var/"log/candy/output.log"
+      error_log_path var/"log/candy/output.log"
+    caveats: |
+      <<~EOS
+        To finish the installation, you need to create a DNS resolver file
+        in /etc/resolver/YOUR_DOMAIN. Creating the /etc/resolver directory
+        and the config file requires superuser privileges. You can set things
+        up with an one-liner
+
+            sudo candy setup
+
+        Alternatively, you can execute the following bash script
+
+            sudo mkdir -p /etc/resolver && \\
+              sudo chown -R $(whoami):$(id -g -n) /etc/resolver && \\
+              cp #{etc/"resolver/candy-test"} /etc/resolver/candy-test
+
+        To have launchd start Candy now and restart at login
+
+            brew services start candy
+
+        Or, if you don't want/need a background service you can just run
+
+            candy run
+
+        A sample Candy config file is in #{etc/"candyconfig"}. You can
+        copy it to your home to override Candy's default setting
+
+            cp #{etc/"candyconfig"} ~/.candyconfig
+      EOS
+    test: |
+      http = free_port
+      https = free_port
+      dns = free_port
+      admin = free_port
+
+      mkdir_p testpath/".candy"
+      (testpath/".candy/app").write(admin)
+
+      (testpath/"candyconfig").write <<~EOS
+        {
+          "domain": ["brew-test"],
+          "http-addr": "127.0.0.1:#{http}",
+          "https-addr": "127.0.0.1:#{https}",
+          "dns-addr": "127.0.0.1:#{dns}",
+          "admin-addr": "127.0.0.1:#{admin}",
+          "host-root": "#{testpath/".candy"}"
+        }
+      EOS
+      puts shell_output("cat #{testpath/"candyconfig"}")
+
+      fork do
+        exec bin/"candy", "run", "--config", testpath/"candyconfig"
+      end
+
+      sleep 2
+
+      assert_match "\":#{http}\"", shell_output("curl -s http://127.0.0.1:#{admin}/config/apps/http/servers/candy/listen/0")
+      assert_match "\":#{https}\"", shell_output("curl -s http://127.0.0.1:#{admin}/config/apps/http/servers/candy/listen/1")
+      assert_match "127.0.0.1", shell_output("dig +short @127.0.0.1 -p #{dns} app.brew-test")
