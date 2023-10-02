@@ -55,13 +55,21 @@ func Test_Server(t *testing.T) {
 		errch <- err
 	}()
 
-	http := &http.Client{
-		Timeout: 2 * time.Second,
+	client := &http.Client{
+		Timeout: time.Second,
 	}
 
 	t.Run("http addr", func(t *testing.T) {
 		waitUntil(t, 5*time.Second, 10, func() error {
-			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/http/servers/http/listen/0", adminAddr))
+			rr, err := client.Get(fmt.Sprintf("http://%s/config/", adminAddr))
+			fmt.Println(err)
+			if err == nil {
+				bb, err := io.ReadAll(rr.Body)
+				fmt.Println(string(bb))
+				fmt.Println(err)
+			}
+
+			resp, err := client.Get(fmt.Sprintf("http://%s/config/apps/http/servers/http/listen/0", adminAddr))
 			if err != nil {
 				return err
 			}
@@ -83,7 +91,7 @@ func Test_Server(t *testing.T) {
 
 	t.Run("https addr", func(t *testing.T) {
 		waitUntil(t, 5*time.Second, 10, func() error {
-			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/http/servers/https/listen/0", adminAddr))
+			resp, err := client.Get(fmt.Sprintf("http://%s/config/apps/http/servers/https/listen/0", adminAddr))
 			if err != nil {
 				return err
 			}
@@ -105,7 +113,7 @@ func Test_Server(t *testing.T) {
 
 	t.Run("tls subjects", func(t *testing.T) {
 		waitUntil(t, 5*time.Second, 10, func() error {
-			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
+			resp, err := client.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
 			if err != nil {
 				return nil
 			}
@@ -166,7 +174,7 @@ func Test_Server(t *testing.T) {
 				t.Fatalf("Unexpected IPs (-want +got): %s", diff)
 			}
 
-			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
+			resp, err := client.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
 			if err != nil {
 				return nil
 			}
