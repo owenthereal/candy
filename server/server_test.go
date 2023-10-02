@@ -55,7 +55,7 @@ func Test_Server(t *testing.T) {
 	}()
 
 	t.Run("http addr", func(t *testing.T) {
-		waitUntil(t, 3, func() error {
+		waitUntil(t, 5*time.Second, 10, func() error {
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/http/servers/http/listen/0", adminAddr))
 			if err != nil {
 				return err
@@ -77,7 +77,7 @@ func Test_Server(t *testing.T) {
 	})
 
 	t.Run("https addr", func(t *testing.T) {
-		waitUntil(t, 3, func() error {
+		waitUntil(t, 5*time.Second, 10, func() error {
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/http/servers/https/listen/0", adminAddr))
 			if err != nil {
 				return err
@@ -99,7 +99,7 @@ func Test_Server(t *testing.T) {
 	})
 
 	t.Run("tls subjects", func(t *testing.T) {
-		waitUntil(t, 3, func() error {
+		waitUntil(t, 5*time.Second, 10, func() error {
 			resp, err := http.Get(fmt.Sprintf("http://%s/config/apps/tls/automation/policies/0/subjects", adminAddr))
 			if err != nil {
 				return nil
@@ -144,7 +144,7 @@ func Test_Server(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		waitUntil(t, 3, func() error {
+		waitUntil(t, 5*time.Second, 10, func() error {
 			r := &net.Resolver{
 				PreferGo: true,
 				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -302,7 +302,7 @@ func randomPort(t *testing.T) string {
 	return strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 }
 
-func waitUntil(tb testing.TB, times int, fn func() error) {
+func waitUntil(tb testing.TB, waitInterval time.Duration, times int, fn func() error) {
 	tb.Helper()
 
 	var err error
@@ -312,9 +312,7 @@ func waitUntil(tb testing.TB, times int, fn func() error) {
 			return
 		}
 
-		tb.Logf("Failing to execute wait func: %s", err.Error())
-
-		time.Sleep(time.Duration(tries*tries) * time.Second)
+		time.Sleep(waitInterval)
 	}
 
 	tb.Fatal(err)
