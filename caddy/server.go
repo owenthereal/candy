@@ -159,7 +159,6 @@ func (c *caddyServer) loadConfig() (*caddy.Config, error) {
 func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	httpServer := &caddyhttp.Server{
 		Routes: caddyRoutes(
-			reverseproxy.HTTPTransport{},
 			apps,
 		),
 		Listen:    []string{c.cfg.HTTPAddr},
@@ -168,14 +167,7 @@ func (c *caddyServer) buildConfig(apps []candy.App) *caddy.Config {
 	}
 
 	httpsServer := &caddyhttp.Server{
-		TLSConnPolicies: []*caddytls.ConnectionPolicy{
-			{
-				// Prefer http 1.1 over h2 in order: https://github.com/caddyserver/caddy/blob/792fca40f18b7c528b00a7dea508bdfd0821dd8c/modules/caddytls/connpolicy.go#L484
-				ALPN: []string{"http/1.1", "h2"},
-			},
-		},
 		Routes: caddyRoutes(
-			reverseproxy.HTTPTransport{},
 			apps,
 		),
 		Listen: []string{c.cfg.HTTPSAddr},
@@ -322,12 +314,12 @@ func appHosts(apps []candy.App) []string {
 	return hosts
 }
 
-func caddyRoutes(tr reverseproxy.HTTPTransport, apps []candy.App) []caddyhttp.Route {
+func caddyRoutes(apps []candy.App) []caddyhttp.Route {
 	var routes caddyhttp.RouteList
 
 	for _, app := range apps {
 		handler := reverseproxy.Handler{
-			TransportRaw: caddyconfig.JSONModuleObject(tr, "protocol", "http", nil),
+			TransportRaw: caddyconfig.JSONModuleObject(reverseproxy.HTTPTransport{}, "protocol", "http", nil),
 			Upstreams:    reverseproxy.UpstreamPool{{Dial: app.Addr}},
 		}
 		route := caddyhttp.Route{
