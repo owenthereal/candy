@@ -31,7 +31,7 @@ jobs:
       - name: Install certutil on macos
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          brew install certutil
+          brew install nss
       - name: Test
         run: make test
   vet:
