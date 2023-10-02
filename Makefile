@@ -6,7 +6,7 @@ install:
 
 .PHONY: build
 build:
-	go build -o build/candy ./cmd/candy
+	go build -o bin/candy ./cmd/candy
 
 .PHONY: vet
 vet:
@@ -15,3 +15,14 @@ vet:
 .PHONY: test
 test:
 	go test ./... -timeout=5m -coverprofile=c.out -covermode=atomic -count=1 -race -v
+
+BIN_DIR ?= $(CURDIR)/bin
+export PATH := $(BIN_DIR):$(PATH)
+.PHONY: tools
+tools:
+	# goreleaser
+	GOBIN=$(BIN_DIR) go install github.com/goreleaser/goreleaser@latest
+
+.PHONY: goreleaser
+goreleaser:
+	goreleaser release --clean --snapshot --skip=publish

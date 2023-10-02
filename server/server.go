@@ -20,6 +20,7 @@ type Config struct {
 	AdminAddr  string   `mapstructure:"admin-addr"`
 	DnsAddr    string   `mapstructure:"dns-addr"`
 	DnsLocalIp bool     `mapstructure:"dns-local-ip"`
+	Debug      bool     `mapstructure:"debug"`
 }
 
 func (c Config) Validate() error {
@@ -68,6 +69,7 @@ func (s *Server) Run(ctx context.Context) error {
 		TLDs:      s.cfg.Domain,
 		HostRoot:  s.cfg.HostRoot,
 		Logger:    logger.Named("caddy"),
+		Debug:     s.cfg.Debug,
 	})
 
 	dns := dns.New(dns.Config{

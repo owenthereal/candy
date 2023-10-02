@@ -3,6 +3,7 @@ module github.com/owenthereal/candy
 go 1.21
 
 require (
+	github.com/bored-engineer/go-launchd v0.0.0-20230905041514-6aff1185c30f
 	github.com/caddyserver/caddy/v2 v2.7.4
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/go-cmp v0.5.9
@@ -12,7 +13,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.9.0
 	go.uber.org/zap v1.25.0
-	inet.af/tcpproxy v0.0.0-20210824174053-2e577fef49e2
+	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
 )
 
 require (

@@ -44,23 +44,20 @@ func launchRunE(c *cobra.Command, args []string) error {
 
 	var g run.Group
 	for _, cfg := range cfgs {
-		proxies, err := launchd.NewSocketProxy(cfg)
+		proxy, err := launchd.NewSocketProxy(cfg)
 		if err != nil {
 			return err
 		}
 
-		for _, proxy := range proxies {
-			proxy := proxy
-			g.Add(func() error {
-				return proxy.Run()
-			}, func(err error) {
-				proxy.Close()
-			})
-		}
+		g.Add(func() error {
+			return proxy.Run()
+		}, func(err error) {
+			proxy.Close()
+		})
 	}
 
 	{
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(c.Context())
 		g.Add(func() error {
 			return startServer(c, ctx)
 		}, func(err error) {
