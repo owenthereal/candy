@@ -17,6 +17,7 @@ archives:
     files:
       - LICENSE*
       - README*
+      - example/*
 checksum:
   name_template: "checksums.txt"
 snapshot:
