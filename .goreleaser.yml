@@ -58,33 +58,31 @@ brews:
       log_path var/"log/candy/output.log"
       error_log_path var/"log/candy/output.log"
     caveats: |
-      <<~EOS
-        To finish the installation, you need to create a DNS resolver file
-        in /etc/resolver/YOUR_DOMAIN. Creating the /etc/resolver directory
-        and the config file requires superuser privileges. You can set things
-        up with an one-liner
+      To finish the installation, you need to create a DNS resolver file
+      in /etc/resolver/YOUR_DOMAIN. Creating the /etc/resolver directory
+      and the config file requires superuser privileges. You can set things
+      up with an one-liner
 
-            sudo candy setup
+          sudo candy setup
 
-        Alternatively, you can execute the following bash script
+      Alternatively, you can execute the following bash script
 
-            sudo mkdir -p /etc/resolver && \\
-              sudo chown -R $(whoami):$(id -g -n) /etc/resolver && \\
-              cp #{etc/"resolver/candy-test"} /etc/resolver/candy-test
+          sudo mkdir -p /etc/resolver && \\
+            sudo chown -R $(whoami):$(id -g -n) /etc/resolver && \\
+            cp #{etc/"resolver/candy-test"} /etc/resolver/candy-test
 
-        To have launchd start Candy now and restart at login
+      To have launchd start Candy now and restart at login
 
-            brew services start candy
+          brew services start candy
 
-        Or, if you don't want/need a background service you can just run
+      Or, if you don't want/need a background service you can just run
 
-            candy run
+          candy run
 
-        A sample Candy config file is in #{etc/"candyconfig"}. You can
-        copy it to your home to override Candy's default setting
+      A sample Candy config file is in #{etc/"candyconfig"}. You can
+      copy it to your home to override Candy's default setting
 
-            cp #{etc/"candyconfig"} ~/.candyconfig
-      EOS
+          cp #{etc/"candyconfig"} ~/.candyconfig
     test: |
       http = free_port
       https = free_port
