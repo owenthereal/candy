@@ -7,7 +7,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.7.5
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/go-cmp v0.6.0
-	github.com/miekg/dns v1.1.56
+	github.com/miekg/dns v1.1.57
 	github.com/oklog/run v1.1.1-0.20200508094559-c7096881717e
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
