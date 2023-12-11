@@ -10,7 +10,7 @@ jobs:
         os: [macos-13, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           check-latest: true
@@ -24,7 +24,7 @@ jobs:
         os: [macos-13, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           check-latest: true
@@ -42,7 +42,7 @@ jobs:
         os: [macos-13, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           check-latest: true
