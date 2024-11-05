@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/bored-engineer/go-launchd v0.0.0-20230905041514-6aff1185c30f
 	github.com/caddyserver/caddy/v2 v2.7.6
-	github.com/fsnotify/fsnotify v1.7.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/google/go-cmp v0.6.0
 	github.com/miekg/dns v1.1.61
 	github.com/oklog/run v1.1.1-0.20200508094559-c7096881717e
