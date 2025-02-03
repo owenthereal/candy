@@ -10,7 +10,7 @@ require (
 	github.com/miekg/dns v1.1.61
 	github.com/oklog/run v1.1.1-0.20200508094559-c7096881717e
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
